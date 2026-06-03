@@ -97,6 +97,7 @@
     <!-- CONTENT -->
     <div id="content">
       <div id="inner">
+        <div id="tab-profile" class="page" style="display:none"></div>
         <div id="tab-blocks" class="page"></div>
         <div id="tab-session" class="page" style="display:none"></div>
         <div id="tab-history" class="page" style="display:none"></div>
@@ -106,6 +107,10 @@
 
     <!-- BOTTOM NAV -->
     <div id="bottomnav" style="flex-shrink:0;background:rgba(3,7,18,.98);border-top:1px solid #1f2937;display:flex">
+      <button class="nav-btn" onclick="goTab('profile')" id="nav-profile">
+        <span style="font-size:20px">👤</span>
+        <span style="font-size:9px;letter-spacing:1px">PROFIL</span>
+      </button>
       <button class="nav-btn" onclick="goTab('blocks')" id="nav-blocks">
         <span style="font-size:20px">🧱</span>
         <span style="font-size:9px;letter-spacing:1px">BLOCS</span>
@@ -164,10 +169,62 @@ function calcSuggest(e1rm,r,rpe){
 const RPE_COLOR={6:"#22c55e",6.5:"#22c55e",7:"#86efac",7.5:"#eab308",8:"#f97316",8.5:"#ef4444",9:"#dc2626",9.5:"#991b1b",10:"#7f1d1d"};
 const RPE_LABEL={6:"Très facile",6.5:"Facile",7:"Modéré",7.5:"Confortable",8:"Difficile",8.5:"Très difficile",9:"Presque max",9.5:"Max-1",10:"Maximum"};
 const rpeC=r=>RPE_COLOR[r]||"#94a3b8";
-const LEVEL_COLOR={Débutant:"#22c55e",Intermédiaire:"#eab308",Avancé:"#ef4444",Spécial:"#a855f7"};
+const LEVEL_COLOR={Débutant:"#22c55e",Intermédiaire:"#eab308",Avancé:"#ef4444",Spécial:"#a855f7","Mon Programme":"#818cf8"};
 
 // ── BLOCKS ───────────────────────────────────────────────────────────────────
 const BLOCKS = [
+  // ── BLOCS PERSONNALISÉS ───────────────────────────────────────────────────
+  {id:"perso_reprise",emoji:"🔄",name:"PHASE 1 — REPRISE",inspo:"Programme personnalisé · 26 ans · 115kg",color:"#22c55e",weeks:8,level:"Mon Programme",
+   desc:"Bloc de reprise sur mesure après 2 ans d'arrêt. Objectif : retrouver les sensations, réhabituer le corps aux charges, exploiter la mémoire musculaire. Toujours 3-4 reps en réserve, aucune série à l'échec. RPE 6 = très facile, c'est voulu.",
+   notes:"🎯 Objectif : technique parfaite + retrouver les sensations\n📹 Filme tes séries de squat, bench et deadlift régulièrement\n🚶 8 000 à 10 000 pas par jour si possible\n🥗 Déficit calorique léger — cible 0.3 à 0.8kg/semaine",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:5,r:5,rpe:6},{l:"Bench Press",s:5,r:5,rpe:6},{l:"Rowing",s:4,r:8,rpe:6}]},
+     {name:"Jour 2",label:"DL / Bench serré",exs:[{l:"Deadlift",s:4,r:5,rpe:6},{l:"Bench Serré",s:4,r:6,rpe:6},{l:"Tirage Vertical",s:4,r:8,rpe:6}]},
+     {name:"Jour 3",label:"Squat pause / Bench",exs:[{l:"Squat Pause",s:4,r:4,rpe:6},{l:"Bench Press",s:6,r:4,rpe:6},{l:"Romanian DL",s:3,r:8,rpe:6}]},
+   ],
+   wp:[{lbl:"S1 Intro",ro:0,vm:0.8},{lbl:"S2",ro:0,vm:0.9},{lbl:"S3",ro:0,vm:1},{lbl:"S4",ro:0,vm:1},{lbl:"S5",ro:0.5,vm:1},{lbl:"S6",ro:0.5,vm:1},{lbl:"S7",ro:0.5,vm:1},{lbl:"Deload",ro:-1,vm:0.6}]},
+
+  {id:"perso_transition",emoji:"⚡",name:"PHASE 2 — TRANSITION PL",inspo:"Programme personnalisé · Semaine 7-9",color:"#f59e0b",weeks:6,level:"Mon Programme",
+   desc:"Introduction du travail spécifique powerlifting. Top single suivi de back-off sets. Objectif : réapprendre à manipuler des charges lourdes et construire l'e1RM sans tester un vrai max.",
+   notes:"🎯 Top single @ RPE 6-7 puis back-off sets\n📈 L'e1RM va s'affiner semaine après semaine\n⚖️ Continuer déficit calorique — régularité avant tout\n📹 Continuer à filmer les mouvements",
+   days:[
+     {name:"Jour 1",label:"Squat top single",exs:[{l:"Squat",s:1,r:1,rpe:7},{l:"Squat",s:4,r:5,rpe:7},{l:"Bench Press",s:3,r:5,rpe:6}]},
+     {name:"Jour 2",label:"Bench top single",exs:[{l:"Bench Press",s:1,r:1,rpe:7},{l:"Bench Press",s:5,r:5,rpe:7},{l:"Deadlift",s:3,r:4,rpe:6}]},
+     {name:"Jour 3",label:"DL top single",exs:[{l:"Deadlift",s:1,r:1,rpe:7},{l:"Deadlift",s:4,r:4,rpe:7},{l:"Bench Press",s:3,r:4,rpe:7}]},
+   ],
+   wp:[{lbl:"Intro",ro:0,vm:0.8},{lbl:"S2",ro:0.5,vm:1},{lbl:"S3",ro:0.5,vm:1},{lbl:"S4",ro:1,vm:0.9},{lbl:"S5",ro:1,vm:0.9},{lbl:"Deload",ro:-1.5,vm:0.5}]},
+
+  {id:"perso_accum",emoji:"📦",name:"PHASE 3A — ACCUMULATION",inspo:"Programme personnalisé · Bloc 1",color:"#3b82f6",weeks:6,level:"Mon Programme",
+   desc:"Premier vrai bloc powerlifting. Beaucoup de volume à RPE 6-7. Travail principal en 4-6 reps. Consolider la technique et accumuler du travail de qualité.",
+   notes:"🎯 Volume élevé — RPE 6 à 7 max\n💪 Profite du surplus musculaire de la reprise\n⚖️ Affiner la composition corporelle\n📊 Vérifier la progression de l'e1RM semaine après semaine",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:5,r:5,rpe:7},{l:"Bench Press",s:5,r:5,rpe:7},{l:"Romanian DL",s:3,r:6,rpe:6}]},
+     {name:"Jour 2",label:"DL / Bench",exs:[{l:"Deadlift",s:4,r:5,rpe:7},{l:"Bench Press",s:4,r:6,rpe:7},{l:"Squat",s:3,r:5,rpe:6}]},
+     {name:"Jour 3",label:"Full volume",exs:[{l:"Squat",s:4,r:6,rpe:7},{l:"Bench Press",s:5,r:6,rpe:7},{l:"Deadlift",s:3,r:5,rpe:7}]},
+   ],
+   wp:[{lbl:"Intro",ro:0,vm:0.8},{lbl:"Vol.",ro:0,vm:1},{lbl:"Vol.+",ro:0.5,vm:1},{lbl:"Surcharge",ro:0.5,vm:1.1},{lbl:"Intens.",ro:0.5,vm:0.9},{lbl:"Deload",ro:-2,vm:0.5}]},
+
+  {id:"perso_intens",emoji:"🔥",name:"PHASE 3B — INTENSIFICATION",inspo:"Programme personnalisé · Bloc 2",color:"#f97316",weeks:4,level:"Mon Programme",
+   desc:"Charges plus lourdes, RPE 7-8.5. Travail principal en 3-4 reps. Les acquis du bloc accumulation se transforment en force brute. Volume réduit, intensité maximisée.",
+   notes:"🎯 RPE 7 à 8.5 — c'est censé être difficile\n📈 L'e1RM devrait bien progresser ici\n⚖️ Maintenir le déficit — la force progresse même en déficit\n💊 Protéines en priorité pour préserver le muscle",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:4,rpe:7.5},{l:"Bench Press",s:4,r:4,rpe:7.5},{l:"Deadlift",s:2,r:3,rpe:7}]},
+     {name:"Jour 2",label:"DL / Bench",exs:[{l:"Deadlift",s:3,r:3,rpe:8},{l:"Bench Press",s:3,r:4,rpe:8},{l:"Squat",s:3,r:4,rpe:7.5}]},
+     {name:"Jour 3",label:"Full lourd",exs:[{l:"Squat",s:3,r:3,rpe:8.5},{l:"Bench Press",s:3,r:3,rpe:8.5},{l:"Deadlift",s:3,r:3,rpe:8}]},
+   ],
+   wp:[{lbl:"Transition",ro:0,vm:1},{lbl:"Intens.",ro:0.5,vm:0.9},{lbl:"Intens.+",ro:1,vm:0.8},{lbl:"Deload",ro:-2,vm:0.5}]},
+
+  {id:"perso_peak",emoji:"🔺",name:"PHASE 3C — PEAK",inspo:"Programme personnalisé · Bloc 3",color:"#ef4444",weeks:3,level:"Mon Programme",
+   desc:"Singles lourds, volume réduit. Préparation à un test de max ou à une compétition. 2-3 semaines seulement. Chaque séance compte.",
+   notes:"🎯 Singles à RPE 8-9 — réapprendre à être lourd\n🏆 Objectif : tester un e1RM fiable ou participer à une compét'\n⚖️ Légère remontée calorique possible pour performer\n😴 Sommeil et récupération prioritaires",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:2,r:2,rpe:8.5},{l:"Bench Press",s:2,r:2,rpe:8.5}]},
+     {name:"Jour 2",label:"DL / Bench",exs:[{l:"Deadlift",s:2,r:2,rpe:9},{l:"Bench Press",s:3,r:2,rpe:8.5}]},
+     {name:"Jour 3",label:"Jour lourd",exs:[{l:"Squat",s:1,r:1,rpe:9},{l:"Bench Press",s:1,r:1,rpe:9},{l:"Deadlift",s:1,r:1,rpe:9}]},
+   ],
+   wp:[{lbl:"Entrée",ro:0,vm:0.9},{lbl:"Pic",ro:0.5,vm:0.8},{lbl:"Test",ro:0,vm:0.5}]},
+
+  // ── BLOCS CLASSIQUES ──────────────────────────────────────────────────────
   {id:"rts",emoji:"🧠",name:"RTS AUTOREGULÉ",inspo:"Mike Tuchscherer / RTS",color:"#818cf8",weeks:6,level:"Intermédiaire",
    desc:"Basé sur le système RTS du créateur de la table RPE. Les poids s'ajustent automatiquement selon ton RPE réel séance après séance.",
    days:[
@@ -255,7 +312,7 @@ let STATE = {
   tab:"blocks",
   activeId:null, week:0, dayIdx:0,
   log:{}, saving:false, saved:false,
-  levelFilter:"Tous",
+  levelFilter:"Mon Programme",
   history:[], e1rms:{},
 };
 
@@ -310,6 +367,7 @@ function btn(text,style,onclick){
 
 // ── RENDER ───────────────────────────────────────────────────────────────────
 function render(){
+  renderTab("profile",renderProfile);
   renderTab("blocks",renderBlocks);
   renderTab("session",renderSession);
   renderTab("history",renderHistory);
@@ -324,8 +382,9 @@ function renderTab(name,fn){
 }
 
 function updateNav(){
-  ["blocks","session","history","settings"].forEach(t=>{
+  ["profile","blocks","session","history","settings"].forEach(t=>{
     const n=document.getElementById("nav-"+t);
+    if(!n)return;
     const active=STATE.tab===t;
     n.style.color=active?"#818cf8":"#374151";
     n.querySelectorAll("span")[1].style.color=active?"#818cf8":"#374151";
@@ -333,6 +392,116 @@ function updateNav(){
 }
 
 function goTab(t){STATE.tab=t;render();}
+
+// ── PROFILE TAB ───────────────────────────────────────────────────────────────
+function renderProfile(root){
+  root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"4px"},"MON PROFIL"));
+  root.appendChild(div({fontSize:"11px",color:"#6b7280",marginBottom:"16px"},"Programme personnalisé · Mis à jour selon ta situation"));
+
+  // Stats card
+  const stats=div({background:"#111827",border:"1px solid #818cf880",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
+  stats.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:12px;letter-spacing:1px">👤 PROFIL ATHLÈTE</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:#6b7280;letter-spacing:1px">ÂGE</div>
+        <div style="font-size:20px;font-weight:800;color:#e2e8f0;margin-top:2px">26 ans</div>
+      </div>
+      <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:#6b7280;letter-spacing:1px">TAILLE</div>
+        <div style="font-size:20px;font-weight:800;color:#e2e8f0;margin-top:2px">1m77</div>
+      </div>
+      <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:#6b7280;letter-spacing:1px">POIDS ACTUEL</div>
+        <div style="font-size:20px;font-weight:800;color:#f97316;margin-top:2px">115 kg</div>
+      </div>
+      <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:#6b7280;letter-spacing:1px">OBJECTIF POIDS</div>
+        <div style="font-size:20px;font-weight:800;color:#22c55e;margin-top:2px">95-100 kg</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#0d1117;border-radius:8px;font-size:11px;color:#9ca3af;line-height:1.6">
+      <strong style="color:#e2e8f0">Historique :</strong> 2 ans de musculation + quelques mois de powerlifting · Arrêt de 2 ans · Bonne technique conservée · Point fort : Bench Press
+    </div>`;
+  root.appendChild(stats);
+
+  // Nutrition card
+  const nutri=div({background:"#111827",border:"1px solid #22c55e40",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
+  nutri.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:#22c55e;margin-bottom:12px;letter-spacing:1px">🥗 NUTRITION</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px">
+        <span style="font-size:18px">⚖️</span>
+        <div><div style="font-size:12px;color:#e2e8f0;font-weight:600">Déficit calorique léger</div>
+        <div style="font-size:10px;color:#6b7280">Perte cible : 0.3 à 0.8 kg / semaine</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px">
+        <span style="font-size:18px">🥩</span>
+        <div><div style="font-size:12px;color:#e2e8f0;font-weight:600">Priorité aux protéines</div>
+        <div style="font-size:10px;color:#6b7280">Préserver le muscle pendant la perte de poids</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px">
+        <span style="font-size:18px">🚶</span>
+        <div><div style="font-size:12px;color:#e2e8f0;font-weight:600">8 000 – 10 000 pas / jour</div>
+        <div style="font-size:10px;color:#6b7280">Activité légère pour augmenter le déficit</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px">
+        <span style="font-size:18px">📅</span>
+        <div><div style="font-size:12px;color:#e2e8f0;font-weight:600">Régularité avant tout</div>
+        <div style="font-size:10px;color:#6b7280">3 séances chaque semaine, sans exception</div></div>
+      </div>
+    </div>`;
+  root.appendChild(nutri);
+
+  // Roadmap card
+  const road=div({background:"#111827",border:"1px solid #f59e0b40",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
+  road.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:12px;letter-spacing:1px">🗺️ FEUILLE DE ROUTE</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${[
+        ["🔄","Phase 1","Reprise","S1–S8","Retrouver les sensations · RPE 6","#22c55e"],
+        ["⚡","Phase 2","Transition PL","S7–S14","Top singles + back-off · RPE 6-7","#f59e0b"],
+        ["📦","Phase 3A","Accumulation","S14+","Volume élevé · RPE 6-7","#3b82f6"],
+        ["🔥","Phase 3B","Intensification","S20+","Charges lourdes · RPE 7-8.5","#f97316"],
+        ["🔺","Phase 3C","Peak","S24+","Singles · Prépa max ou compét'","#ef4444"],
+      ].map(([e,phase,name,timing,desc,c])=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px;border-left:3px solid ${c}">
+          <span style="font-size:16px">${e}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;font-weight:700;color:${c}">${phase} — ${name}</span>
+              <span style="font-size:9px;color:#6b7280">${timing}</span>
+            </div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:1px">${desc}</div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+  root.appendChild(road);
+
+  // Priorities card
+  const prio=div({background:"#111827",border:"1px solid #818cf840",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
+  prio.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:12px;letter-spacing:1px">⭐ PRIORITÉS ABSOLUES</div>
+    ${[
+      ["1","Technique parfaite","Squat, bench et deadlift — filme régulièrement","#818cf8"],
+      ["2","Régularité","3 séances par semaine sans exception","#22c55e"],
+      ["3","Perte de poids progressive","0.3 à 0.8 kg/semaine — pas plus vite","#f59e0b"],
+      ["4","Progression de la force","L'e1RM doit progresser bloc après bloc","#ef4444"],
+    ].map(([n,title,desc,c])=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px;margin-bottom:6px">
+        <div style="width:24px;height:24px;border-radius:50%;background:${c}22;border:1px solid ${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${c};flex-shrink:0">${n}</div>
+        <div><div style="font-size:12px;font-weight:600;color:#e2e8f0">${title}</div>
+        <div style="font-size:10px;color:#6b7280">${desc}</div></div>
+      </div>`).join("")}`;
+  root.appendChild(prio);
+
+  // Quick start button
+  const qs=document.createElement("button");
+  qs.innerHTML="🔄 COMMENCER PAR LA PHASE 1 — REPRISE";
+  Object.assign(qs.style,{width:"100%",background:"#22c55e",border:"none",color:"#fff",padding:"14px",borderRadius:"10px",fontSize:"12px",fontWeight:"700",letterSpacing:"1px",marginBottom:"8px"});
+  qs.onclick=()=>{STATE.activeId="perso_reprise";STATE.week=0;STATE.dayIdx=0;STATE.log={};save("pl_st",{id:"perso_reprise",week:0,day:0});goTab("session");};
+  root.appendChild(qs);
+}
 
 // ── BLOCKS TAB ───────────────────────────────────────────────────────────────
 function renderBlocks(root){
@@ -344,7 +513,7 @@ function renderBlocks(root){
 
   // Filter
   const filters=div({display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"16px"});
-  ["Tous","Débutant","Intermédiaire","Avancé","Spécial"].forEach(l=>{
+  ["Mon Programme","Tous","Débutant","Intermédiaire","Avancé","Spécial"].forEach(l=>{
     const active=STATE.levelFilter===l;
     const b=btn(l,{
       background:active?"rgba(79,70,229,.25)":"#1f2937",
@@ -624,19 +793,58 @@ function renderHistory(root){
       `<div style="font-size:32px;margin-bottom:10px">📋</div><div style="color:#6b7280;font-size:13px">Aucune séance enregistrée.</div>`));
     return;
   }
-  [...STATE.history].reverse().forEach(s=>{
+
+  // Sessions — affichées du plus récent au plus ancien
+  [...STATE.history].map((s,realIdx)=>({s,realIdx})).reverse().forEach(({s,realIdx})=>{
     const bt=BLOCKS.find(b=>b.id===s.blockId);
     const card=div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"14px",marginBottom:"8px"});
-    const hdr=div({display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"});
-    hdr.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:16px">${bt?.emoji||""}</span>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:${bt?.color||"#818cf8"}">${s.blockName} — S${s.week} ${s.weekLabel}</div>
-          <div style="font-size:10px;color:#6b7280">${s.day}${s.blockInspo?" · ("+s.blockInspo+")":""}</div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:#4b5563;flex-shrink:0">${s.date}</div>`;
+
+    // Header
+    const hdr=div({display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px",gap:"8px"});
+    const hdrLeft=div({display:"flex",alignItems:"center",gap:"8px",flex:"1",minWidth:"0"});
+    hdrLeft.innerHTML=`
+      <span style="font-size:16px;flex-shrink:0">${bt?.emoji||"📋"}</span>
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:700;color:${bt?.color||"#818cf8"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.blockName} — S${s.week} ${s.weekLabel||""}</div>
+        <div style="font-size:10px;color:#6b7280">${s.day||""} · ${s.date}</div>
+      </div>`;
+
+    // Zone de confirmation inline (cachée au départ)
+    const confirmZone=div({display:"none",alignItems:"center",gap:"6px",marginTop:"8px",padding:"8px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:"8px"});
+    confirmZone.innerHTML=`<span style="font-size:11px;color:#ef4444;flex:1">Supprimer cette séance ?</span>`;
+
+    const btnOui=document.createElement("button");
+    btnOui.textContent="Oui";
+    Object.assign(btnOui.style,{background:"#ef4444",border:"none",color:"#fff",padding:"5px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"700"});
+    btnOui.onclick=()=>{
+      STATE.history.splice(realIdx,1);
+      save("pl_hist",STATE.history);
+      renderTab("history",renderHistory);
+    };
+
+    const btnNon=document.createElement("button");
+    btnNon.textContent="Non";
+    Object.assign(btnNon.style,{background:"#374151",border:"none",color:"#e2e8f0",padding:"5px 12px",borderRadius:"6px",fontSize:"12px"});
+    btnNon.onclick=()=>{ confirmZone.style.display="none"; delOne.style.opacity="1"; };
+
+    confirmZone.appendChild(btnOui);
+    confirmZone.appendChild(btnNon);
+
+    // Bouton poubelle
+    const delOne=document.createElement("button");
+    delOne.textContent="🗑️";
+    Object.assign(delOne.style,{background:"rgba(239,68,68,.12)",border:"1px solid rgba(239,68,68,.3)",color:"#ef4444",padding:"5px 9px",borderRadius:"7px",fontSize:"14px",flexShrink:"0"});
+    delOne.onclick=()=>{
+      confirmZone.style.display="flex";
+      delOne.style.opacity="0.4";
+    };
+
+    hdr.appendChild(hdrLeft);
+    hdr.appendChild(delOne);
     card.appendChild(hdr);
+    card.appendChild(confirmZone);
+
+    // Exercices
     (s.exercises||[]).forEach((ex,j)=>{
       const row=div({display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderTop:"1px solid #1f2937",fontSize:"12px",gap:"6px"});
       row.innerHTML=`<span style="color:#d1d5db;flex:1">${ex.lift}</span>
@@ -647,7 +855,9 @@ function renderHistory(root){
     });
     root.appendChild(card);
   });
-  const delBtn=btn("🗑️ Effacer l'historique",{marginTop:"8px",background:"#1f2937",border:"1px solid #991b1b",color:"#ef4444",padding:"8px 16px",borderRadius:"8px",fontSize:"12px"},()=>{
+
+  // Bouton tout effacer
+  const delBtn=btn("🗑️ Effacer tout l'historique",{marginTop:"8px",background:"#1f2937",border:"1px solid #991b1b",color:"#ef4444",padding:"8px 16px",borderRadius:"8px",fontSize:"12px"},()=>{
     if(confirm("Effacer tout l'historique ?")){STATE.history=[];STATE.e1rms={};save("pl_hist",[]);save("pl_e1rm",{});renderTab("history",renderHistory);}
   });
   root.appendChild(delBtn);
@@ -739,7 +949,8 @@ function openModal(id){
         </div>
       </div>
     </div>
-    <div style="font-size:13px;color:#9ca3af;line-height:1.7;margin-bottom:16px;padding:12px;background:#0d1117;border-radius:8px;border-left:3px solid ${b.color}60">${b.desc}</div>
+    <div style="font-size:13px;color:#9ca3af;line-height:1.7;margin-bottom:${b.notes?'10px':'16px'};padding:12px;background:#0d1117;border-radius:8px;border-left:3px solid ${b.color}60">${b.desc}</div>
+    ${b.notes?`<div style="font-size:11px;line-height:1.8;margin-bottom:16px;padding:12px;background:#052e16;border-radius:8px;border-left:3px solid #22c55e;color:#86efac">${b.notes.replace(/\n/g,'<br>')}</div>`:''}
     <div style="font-size:11px;color:#6b7280;letter-spacing:2px;margin-bottom:8px">STRUCTURE</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px">`;
   b.wp.forEach((w,i)=>{
