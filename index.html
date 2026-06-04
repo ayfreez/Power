@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="PowerLog"/>
   <meta name="theme-color" content="#030712"/>
   <title>PowerLog</title>
@@ -26,6 +26,8 @@
       display:flex;
       flex-direction:column;
       overflow:hidden;
+      padding-top:env(safe-area-inset-top);
+      padding-bottom:env(safe-area-inset-bottom);
     }
     /* scrollbar */
     ::-webkit-scrollbar{width:3px}
@@ -39,14 +41,14 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     .page{animation:fadein .2s ease}
-    /* safe area for iPhone notch */
+    /* safe area header et nav */
     #header{
       padding-top:12px;
       padding-left:16px;
       padding-right:16px;
       padding-bottom:10px;
     }
-    #bottomnav{padding-bottom:max(16px, env(safe-area-inset-bottom))}
+    #bottomnav{padding-bottom:8px}
     /* buttons */
     button{cursor:pointer;font-family:inherit;-webkit-appearance:none;border:none}
     /* cards */
