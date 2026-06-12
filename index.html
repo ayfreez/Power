@@ -239,7 +239,26 @@ const BLOCKS = [
    ],
    wp:[{lbl:"Entrée",ro:0,vm:0.9},{lbl:"Pic",ro:0.5,vm:0.8},{lbl:"Test",ro:0,vm:0.5}]},
 
-  
+  {id:"perso_consolidation",emoji:"🔒",name:"CONSOLIDATION",inspo:"Programme personnalisé · Après le Peak",color:"#06b6d4",weeks:6,level:"Mon Programme",
+   desc:"Consolide les gains du premier cycle complet. Volume modéré, intensité maintenue. On ne régresse pas mais on ne force pas non plus. La transition idéale avant un nouveau cycle.",
+   notes:"🎯 Consolider sans forcer — la fatigue du peak est encore là\n📊 Compare tes e1RM avec ceux du début du premier cycle\n⚖️ Continuer le déficit calorique\n😴 Sommeil prioritaire — la récup est la clé ici",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:4,rpe:7.5},{l:"Bench Press",s:4,r:4,rpe:7.5},{l:"Romanian DL",s:3,r:6,rpe:7}]},
+     {name:"Jour 2",label:"Bench / DL",exs:[{l:"Bench Press",s:5,r:4,rpe:8},{l:"Deadlift",s:3,r:3,rpe:7.5},{l:"Rowing",s:4,r:6,rpe:7}]},
+     {name:"Jour 3",label:"DL / Full",exs:[{l:"Deadlift",s:4,r:3,rpe:8},{l:"Squat",s:3,r:3,rpe:7.5},{l:"Bench Press",s:3,r:4,rpe:7.5}]},
+   ],
+   wp:[{lbl:"Transition",ro:0,vm:0.85},{lbl:"Construction",ro:0,vm:1},{lbl:"Construction",ro:0.5,vm:1},{lbl:"Surcharge",ro:0.5,vm:1.1},{lbl:"Intensité",ro:1,vm:0.9},{lbl:"Deload",ro:-1.5,vm:0.5}]},
+
+  {id:"perso_force_brute",emoji:"💪",name:"FORCE BRUTE",inspo:"Programme personnalisé · Cycle 2",color:"#a855f7",weeks:5,level:"Mon Programme",
+   desc:"Deuxième cycle — les charges sont significativement plus lourdes qu'en Phase 3. RPE élevés dès le départ, peu de volume mais très qualitatif. Prépare un nouveau test de max.",
+   notes:"🎯 RPE 8 à 9 — tu es prêt pour ça maintenant\n📈 Tes e1RM doivent être bien supérieurs au début\n⚖️ Légère remontée calorique possible si tu stagnes\n🏆 Objectif fin de bloc : nouveau test ou compét'",
+   days:[
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:3,rpe:8},{l:"Bench Press",s:4,r:3,rpe:8},{l:"Deadlift",s:2,r:3,rpe:7}]},
+     {name:"Jour 2",label:"Full modéré",exs:[{l:"Bench Press",s:5,r:3,rpe:8.5},{l:"Squat",s:3,r:3,rpe:8},{l:"Romanian DL",s:3,r:5,rpe:7.5}]},
+     {name:"Jour 3",label:"Jour lourd",exs:[{l:"Deadlift",s:3,r:2,rpe:8.5},{l:"Squat",s:2,r:2,rpe:9},{l:"Bench Press",s:3,r:2,rpe:8.5}]},
+   ],
+   wp:[{lbl:"Intro lourd",ro:0,vm:0.9},{lbl:"Lourd",ro:0.5,vm:1},{lbl:"Très lourd",ro:1,vm:0.9},{lbl:"Pic",ro:1.5,vm:0.8},{lbl:"Deload",ro:-2,vm:0.5}]},
+];
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let STATE = {
@@ -398,6 +417,8 @@ function renderProfile(root){
         ["📦","Phase 3A","Accumulation","S14+","Volume élevé · RPE 6-7","#3b82f6"],
         ["🔥","Phase 3B","Intensification","S20+","Charges lourdes · RPE 7-8.5","#f97316"],
         ["🔺","Phase 3C","Peak","S24+","Singles · Prépa max ou compét'","#ef4444"],
+        ["🔒","Consolidation","Cycle 2 intro","S27+","Consolider les gains · RPE 7.5-8","#06b6d4"],
+        ["💪","Force Brute","Cycle 2","S33+","Très lourd · RPE 8-9","#a855f7"],
       ].map(([e,phase,name,timing,desc,c])=>`
         <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1117;border-radius:8px;border-left:3px solid ${c}">
           <span style="font-size:16px">${e}</span>
@@ -447,7 +468,7 @@ function renderBlocks(root){
 
   // Filter
   const filters=div({display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"16px"});
-  ["Mon Programme","Tous","Débutant","Intermédiaire","Avancé","Spécial"].forEach(l=>{
+  ["Mon Programme"].forEach(l=>{
     const active=STATE.levelFilter===l;
     const b=btn(l,{
       background:active?"rgba(79,70,229,.25)":"#1f2937",
