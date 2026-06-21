@@ -112,6 +112,7 @@
         <div id="tab-profile" class="page" style="display:none"></div>
         <div id="tab-blocks" class="page"></div>
         <div id="tab-session" class="page" style="display:none"></div>
+        <div id="tab-weight" class="page" style="display:none"></div>
         <div id="tab-history" class="page" style="display:none"></div>
         <div id="tab-settings" class="page" style="display:none"></div>
       </div>
@@ -120,26 +121,44 @@
     <!-- BOTTOM NAV -->
     <div id="bottomnav" style="flex-shrink:0;background:rgba(3,7,18,.98);border-top:1px solid #1f2937;display:flex">
       <button class="nav-btn" onclick="goTab('profile')" id="nav-profile">
-        <span style="font-size:20px">👤</span>
-        <span style="font-size:9px;letter-spacing:1px">PROFIL</span>
+        <span style="font-size:18px">👤</span>
+        <span style="font-size:8px;letter-spacing:.5px">PROFIL</span>
       </button>
       <button class="nav-btn" onclick="goTab('blocks')" id="nav-blocks">
-        <span style="font-size:20px">🧱</span>
-        <span style="font-size:9px;letter-spacing:1px">BLOCS</span>
+        <span style="font-size:18px">🧱</span>
+        <span style="font-size:8px;letter-spacing:.5px">BLOCS</span>
       </button>
       <button class="nav-btn" onclick="goTab('session')" id="nav-session">
-        <span style="font-size:20px">🏋️</span>
-        <span style="font-size:9px;letter-spacing:1px">SÉANCE</span>
+        <span style="font-size:18px">🏋️</span>
+        <span style="font-size:8px;letter-spacing:.5px">SÉANCE</span>
+      </button>
+      <button class="nav-btn" onclick="goTab('weight')" id="nav-weight">
+        <span style="font-size:18px">⚖️</span>
+        <span style="font-size:8px;letter-spacing:.5px">POIDS</span>
       </button>
       <button class="nav-btn" onclick="goTab('history')" id="nav-history">
-        <span style="font-size:20px">📊</span>
-        <span style="font-size:9px;letter-spacing:1px">HISTORIQUE</span>
+        <span style="font-size:18px">📊</span>
+        <span style="font-size:8px;letter-spacing:.5px">HISTO</span>
       </button>
       <button class="nav-btn" onclick="goTab('settings')" id="nav-settings">
-        <span style="font-size:20px">⚙️</span>
-        <span style="font-size:9px;letter-spacing:1px">CONFIG</span>
+        <span style="font-size:18px">⚙️</span>
+        <span style="font-size:8px;letter-spacing:.5px">CONFIG</span>
       </button>
     </div>
+  </div>
+
+  <!-- REST TIMER WIDGET (floating) -->
+  <div id="timer-widget" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#111827;border:1.5px solid #4f46e5;border-radius:50px;padding:8px 14px 8px 8px;z-index:90;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);transition:background .3s">
+    <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+      <svg width="44" height="44" style="transform:rotate(-90deg)">
+        <circle cx="22" cy="22" r="36" fill="none" stroke="#1f2937" stroke-width="4" transform="scale(0.5) translate(22,22)"/>
+        <circle id="timer-ring" cx="22" cy="22" r="18" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#818cf8" id="timer-display">2:00</div>
+    </div>
+    <button onclick="toggleTimerPlayPause()" id="timer-playpause" style="background:#4f46e5;color:#fff;width:32px;height:32px;border-radius:50%;font-size:12px;flex-shrink:0">⏸</button>
+    <button onclick="addTimerSeconds(15)" style="background:#1f2937;color:#818cf8;padding:6px 9px;border-radius:7px;font-size:10px;font-weight:600;flex-shrink:0">+15s</button>
+    <button onclick="stopTimer()" style="background:transparent;color:#6b7280;font-size:14px;padding:4px 6px;flex-shrink:0">✕</button>
   </div>
 
   <!-- MODAL -->
@@ -267,12 +286,14 @@ let STATE = {
   log:{}, saving:false, saved:false,
   levelFilter:"Mon Programme",
   history:[], e1rms:{},
+  bodyweight:[], // [{date, weight}]
 };
 
 function load(){
   try{const h=localStorage.getItem("pl_hist");if(h)STATE.history=JSON.parse(h);}catch(e){}
   try{const e=localStorage.getItem("pl_e1rm");if(e)STATE.e1rms=JSON.parse(e);}catch(e){}
   try{const s=localStorage.getItem("pl_st");if(s){const p=JSON.parse(s);STATE.activeId=p.id||null;STATE.week=p.week||0;STATE.dayIdx=p.day||0;}}catch(e){}
+  try{const w=localStorage.getItem("pl_bw");if(w)STATE.bodyweight=JSON.parse(w);}catch(e){}
 }
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
 
@@ -302,6 +323,141 @@ function getSugg(ex){
 }
 function fmt(date){return new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});}
 
+// ── PLATE CALCULATOR ─────────────────────────────────────────────────────────
+// Plaques dispo (kg) — standard powerlifting, barre olympique 20kg
+const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
+const PLATE_COLORS = {25:"#dc2626",20:"#3b82f6",15:"#eab308",10:"#22c55e",5:"#e5e7eb",2.5:"#1f2937",1.25:"#9ca3af"};
+const BAR_WEIGHT = 20;
+
+function calcPlates(totalWeight){
+  const w = parseFloat(totalWeight);
+  if(!w || w <= BAR_WEIGHT) return null;
+  let perSide = (w - BAR_WEIGHT) / 2;
+  if(perSide <= 0) return null;
+  const result = [];
+  for(const p of PLATES){
+    while(perSide >= p - 0.001){
+      result.push(p);
+      perSide -= p;
+    }
+  }
+  const remainder = Math.round(perSide*100)/100;
+  return { plates: result, remainder, exact: remainder < 0.01 };
+}
+
+function plateCalcHTML(weight){
+  const calc = calcPlates(weight);
+  if(!calc) return "";
+  if(calc.plates.length === 0) return `<div style="font-size:10px;color:#6b7280">Barre seule (${BAR_WEIGHT}kg)</div>`;
+  const chips = calc.plates.map(p=>{
+    const c = PLATE_COLORS[p]||"#6b7280";
+    const textColor = (p===5||p===1.25) ? "#111827" : "#fff";
+    return `<span style="background:${c};color:${textColor};border-radius:5px;padding:3px 7px;font-size:11px;font-weight:700;display:inline-block;margin:2px">${p}</span>`;
+  }).join("");
+  const warn = !calc.exact ? `<span style="color:#ef4444;font-size:9px;margin-left:6px">(reste ${calc.remainder}kg non chargeable)</span>` : "";
+  return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
+    <span style="font-size:9px;color:#6b7280;margin-right:6px">Par côté:</span>${chips}${warn}
+  </div>`;
+}
+
+// ── REST TIMER ────────────────────────────────────────────────────────────────
+let TIMER = { running:false, seconds:0, interval:null, duration:120 };
+
+function startTimer(seconds){
+  clearInterval(TIMER.interval);
+  TIMER.duration = seconds;
+  TIMER.seconds = seconds;
+  TIMER.running = true;
+  updateTimerDisplay();
+  TIMER.interval = setInterval(()=>{
+    TIMER.seconds--;
+    if(TIMER.seconds <= 0){
+      clearInterval(TIMER.interval);
+      TIMER.running = false;
+      TIMER.seconds = 0;
+      // Vibration + visual flash
+      if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
+      flashTimerDone();
+    }
+    updateTimerDisplay();
+  }, 1000);
+  showTimerWidget();
+}
+
+function pauseTimer(){
+  clearInterval(TIMER.interval);
+  TIMER.running = false;
+  updateTimerDisplay();
+}
+
+function resumeTimer(){
+  TIMER.running = true;
+  TIMER.interval = setInterval(()=>{
+    TIMER.seconds--;
+    if(TIMER.seconds <= 0){
+      clearInterval(TIMER.interval);
+      TIMER.running = false;
+      TIMER.seconds = 0;
+      if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
+      flashTimerDone();
+    }
+    updateTimerDisplay();
+  }, 1000);
+  updateTimerDisplay();
+}
+
+function stopTimer(){
+  clearInterval(TIMER.interval);
+  TIMER.running = false;
+  TIMER.seconds = 0;
+  hideTimerWidget();
+}
+
+function addTimerSeconds(delta){
+  TIMER.seconds = Math.max(0, TIMER.seconds + delta);
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay(){
+  const el = document.getElementById("timer-display");
+  if(!el) return;
+  const m = Math.floor(TIMER.seconds/60);
+  const s = TIMER.seconds%60;
+  el.textContent = `${m}:${s<10?"0":""}${s}`;
+  const ring = document.getElementById("timer-ring");
+  if(ring){
+    const pct = TIMER.duration > 0 ? TIMER.seconds/TIMER.duration : 0;
+    const circumference = 2 * Math.PI * 36;
+    ring.style.strokeDashoffset = circumference * (1-pct);
+  }
+  const playBtn = document.getElementById("timer-playpause");
+  if(playBtn) playBtn.textContent = TIMER.running ? "⏸" : "▶";
+}
+
+function flashTimerDone(){
+  const widget = document.getElementById("timer-widget");
+  if(!widget) return;
+  widget.style.background = "#16a34a";
+  setTimeout(()=>{ if(widget) widget.style.background = "#111827"; }, 600);
+  setTimeout(()=>{ if(widget) widget.style.background = "#16a34a"; }, 1200);
+  setTimeout(()=>{ if(widget) widget.style.background = "#111827"; }, 1800);
+}
+
+function showTimerWidget(){
+  const w = document.getElementById("timer-widget");
+  if(w) w.style.display = "flex";
+}
+function hideTimerWidget(){
+  const w = document.getElementById("timer-widget");
+  if(w) w.style.display = "none";
+}
+window.startTimer = startTimer;
+window.pauseTimer = pauseTimer;
+window.resumeTimer = resumeTimer;
+window.stopTimer = stopTimer;
+window.addTimerSeconds = addTimerSeconds;
+window.toggleTimerPlayPause = ()=>{ TIMER.running ? pauseTimer() : resumeTimer(); };
+
 // ── DOM HELPERS ──────────────────────────────────────────────────────────────
 function el(tag,style,html){
   const e=document.createElement(tag);
@@ -323,6 +479,7 @@ function render(){
   renderTab("profile",renderProfile);
   renderTab("blocks",renderBlocks);
   renderTab("session",renderSession);
+  renderTab("weight",renderWeight);
   renderTab("history",renderHistory);
   renderTab("settings",renderSettings);
   updateNav();
@@ -335,7 +492,7 @@ function renderTab(name,fn){
 }
 
 function updateNav(){
-  ["profile","blocks","session","history","settings"].forEach(t=>{
+  ["profile","blocks","session","weight","history","settings"].forEach(t=>{
     const n=document.getElementById("nav-"+t);
     if(!n)return;
     const active=STATE.tab===t;
@@ -350,6 +507,9 @@ function goTab(t){STATE.tab=t;render();}
 function renderProfile(root){
   root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"4px"},"MON PROFIL"));
   root.appendChild(div({fontSize:"11px",color:"#6b7280",marginBottom:"16px"},"Programme personnalisé · Mis à jour selon ta situation"));
+
+  const entries=[...STATE.bodyweight].sort((a,b)=>a.date.localeCompare(b.date));
+  const currentWeight = entries.length ? entries[entries.length-1].weight : 115;
 
   // Stats card
   const stats=div({background:"#111827",border:"1px solid #818cf880",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
@@ -366,7 +526,7 @@ function renderProfile(root){
       </div>
       <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
         <div style="font-size:9px;color:#6b7280;letter-spacing:1px">POIDS ACTUEL</div>
-        <div style="font-size:20px;font-weight:800;color:#f97316;margin-top:2px">115 kg</div>
+        <div style="font-size:20px;font-weight:800;color:#f97316;margin-top:2px">${currentWeight} kg</div>
       </div>
       <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
         <div style="font-size:9px;color:#6b7280;letter-spacing:1px">OBJECTIF POIDS</div>
@@ -645,8 +805,17 @@ function renderSession(root){
     wInput.type="number";wInput.step="2.5";
     wInput.value=w;wInput.placeholder=sugg?`${sugg}`:"ex: 100";
     Object.assign(wInput.style,{width:"100%",background:"#0d1117",border:"1px solid #374151",borderRadius:"8px",color:"#e2e8f0",padding:"10px 12px",fontSize:"18px",fontWeight:"600"});
-    wInput.oninput=e=>{if(!STATE.log[i])STATE.log[i]={};STATE.log[i].weight=e.target.value;updateE1rmDisplay(i,ex,computed);};
+    const plateDisplay=document.createElement("div");
+    Object.assign(plateDisplay.style,{marginTop:"6px"});
+    plateDisplay.innerHTML=plateCalcHTML(w);
+    wInput.oninput=e=>{
+      if(!STATE.log[i])STATE.log[i]={};
+      STATE.log[i].weight=e.target.value;
+      plateDisplay.innerHTML=plateCalcHTML(e.target.value);
+      updateE1rmDisplay(i,ex,computed);
+    };
     wWrap.appendChild(wInput);
+    wWrap.appendChild(plateDisplay);
     inputRow.appendChild(wWrap);
 
     // RPE buttons
@@ -683,6 +852,15 @@ function renderSession(root){
       else{msg="🚀 Trop facile — augmente de +5 à +10 kg";color="#818cf8";}
       card.appendChild(div({padding:"7px 10px",borderRadius:"6px",background:`${rpeC(rpe)}10`,borderLeft:`3px solid ${rpeC(rpe)}`,fontSize:"12px",color},msg));
     }
+
+    // Rest timer buttons
+    const timerRow=div({display:"flex",gap:"6px",marginTop:"10px",flexWrap:"wrap"});
+    timerRow.appendChild(div({fontSize:"9px",color:"#6b7280",alignSelf:"center",marginRight:"2px"},"⏱ Repos:"));
+    [["1:30",90],["2:00",120],["3:00",180],["5:00",300]].forEach(([label,secs])=>{
+      timerRow.appendChild(btn(label,{background:"#1f2937",border:"1px solid #374151",color:"#818cf8",padding:"5px 11px",borderRadius:"6px",fontSize:"11px",fontWeight:"600"},()=>startTimer(secs)));
+    });
+    card.appendChild(timerRow);
+
     root.appendChild(card);
   });
 
@@ -726,6 +904,183 @@ async function saveSession2(){
   STATE.saving=false;STATE.saved=true;
   renderTab("session",renderSession);
   setTimeout(()=>{STATE.saved=false;renderTab("session",renderSession);},2500);
+}
+
+// ── WEIGHT TAB ────────────────────────────────────────────────────────────────
+function addBodyweight(value, dateStr){
+  const w = parseFloat(value);
+  if(!w || w <= 0) return;
+  const date = dateStr || new Date().toISOString().split("T")[0];
+  // Remove existing entry for same date, then add
+  STATE.bodyweight = STATE.bodyweight.filter(e=>e.date!==date);
+  STATE.bodyweight.push({date, weight:w});
+  STATE.bodyweight.sort((a,b)=>a.date.localeCompare(b.date));
+  save("pl_bw", STATE.bodyweight);
+  renderTab("weight", renderWeight);
+}
+
+function renderWeight(root){
+  root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"4px"},"SUIVI DU POIDS"));
+  root.appendChild(div({fontSize:"11px",color:"#6b7280",marginBottom:"16px"},"Objectif : 95–100 kg · 0.3 à 0.8 kg/semaine"));
+
+  const entries = [...STATE.bodyweight].sort((a,b)=>a.date.localeCompare(b.date));
+  const last = entries[entries.length-1];
+  const first = entries[0];
+
+  // ── Stats cards ──
+  const statsGrid = div({display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px",marginBottom:"16px"});
+
+  const currentW = last ? last.weight : 115;
+  statsGrid.appendChild(div({background:"#111827",border:"1px solid #1f2937",borderRadius:"10px",padding:"12px",textAlign:"center"},
+    `<div style="font-size:9px;color:#6b7280;letter-spacing:1px">ACTUEL</div>
+     <div style="font-size:20px;font-weight:800;color:#f97316;margin-top:2px">${currentW}<span style="font-size:11px">kg</span></div>`));
+
+  statsGrid.appendChild(div({background:"#111827",border:"1px solid #1f2937",borderRadius:"10px",padding:"12px",textAlign:"center"},
+    `<div style="font-size:9px;color:#6b7280;letter-spacing:1px">OBJECTIF</div>
+     <div style="font-size:20px;font-weight:800;color:#22c55e;margin-top:2px">95-100<span style="font-size:11px">kg</span></div>`));
+
+  let trend = "—";
+  let trendColor = "#6b7280";
+  if(entries.length >= 2){
+    const recent = entries.slice(-14); // dernières ~2 semaines de pesées
+    const days = (new Date(recent[recent.length-1].date) - new Date(recent[0].date)) / 86400000;
+    const diff = recent[recent.length-1].weight - recent[0].weight;
+    if(days > 0){
+      const perWeek = (diff / days) * 7;
+      trend = (perWeek>0?"+":"") + perWeek.toFixed(2) + " kg/sem";
+      trendColor = perWeek < 0 ? "#22c55e" : perWeek > 0.2 ? "#ef4444" : "#eab308";
+    }
+  }
+  statsGrid.appendChild(div({background:"#111827",border:"1px solid #1f2937",borderRadius:"10px",padding:"12px",textAlign:"center"},
+    `<div style="font-size:9px;color:#6b7280;letter-spacing:1px">TENDANCE</div>
+     <div style="font-size:14px;font-weight:800;color:${trendColor};margin-top:6px">${trend}</div>`));
+
+  root.appendChild(statsGrid);
+
+  // ── Add weight form ──
+  const addCard = div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"16px",marginBottom:"16px"});
+  addCard.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#818cf8",marginBottom:"10px"},"➕ AJOUTER UNE PESÉE"));
+
+  const formRow = div({display:"flex",gap:"8px",alignItems:"flex-end"});
+
+  const wWrap = div({flex:"1"});
+  wWrap.appendChild(div({fontSize:"9px",color:"#6b7280",marginBottom:"5px"},"POIDS (KG)"));
+  const wInput = document.createElement("input");
+  wInput.type = "number"; wInput.step = "0.1";
+  wInput.placeholder = currentW ? `${currentW}` : "ex: 114.5";
+  Object.assign(wInput.style,{width:"100%",background:"#0d1117",border:"1px solid #374151",borderRadius:"8px",color:"#e2e8f0",padding:"10px 12px",fontSize:"16px",fontWeight:"600",fontFamily:"inherit",outline:"none"});
+  wWrap.appendChild(wInput);
+  formRow.appendChild(wWrap);
+
+  const dWrap = div({flex:"1"});
+  dWrap.appendChild(div({fontSize:"9px",color:"#6b7280",marginBottom:"5px"},"DATE"));
+  const dInput = document.createElement("input");
+  dInput.type = "date";
+  dInput.value = new Date().toISOString().split("T")[0];
+  Object.assign(dInput.style,{width:"100%",background:"#0d1117",border:"1px solid #374151",borderRadius:"8px",color:"#e2e8f0",padding:"10px 8px",fontSize:"13px",fontFamily:"inherit",outline:"none"});
+  dWrap.appendChild(dInput);
+  formRow.appendChild(dWrap);
+
+  wInput.onkeydown=e=>{ if(e.key==="Enter" && wInput.value){ addBodyweight(wInput.value, dInput.value); } };
+
+  const addBtn = btn("✓",{background:"#4f46e5",color:"#fff",padding:"10px 16px",borderRadius:"8px",fontSize:"16px",fontWeight:"700",flexShrink:"0"},()=>{
+    if(wInput.value){ addBodyweight(wInput.value, dInput.value); }
+  });
+  formRow.appendChild(addBtn);
+  addCard.appendChild(formRow);
+  root.appendChild(addCard);
+
+  // ── Graph ──
+  if(entries.length >= 2){
+    const graphCard = div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"16px",marginBottom:"16px"});
+    graphCard.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#818cf8",marginBottom:"12px"},"📈 ÉVOLUTION"));
+
+    const W = 600, H = 180, PAD = 30;
+    const weights = entries.map(e=>e.weight);
+    let minW = Math.min(...weights, 95) - 2;
+    let maxW = Math.max(...weights, 100) + 2;
+    const range = maxW - minW || 1;
+
+    const xStep = (W - PAD*2) / Math.max(entries.length - 1, 1);
+    const points = entries.map((e,i)=>{
+      const x = PAD + i*xStep;
+      const y = PAD + (H - PAD*2) * (1 - (e.weight - minW) / range);
+      return {x, y, w:e.weight, date:e.date};
+    });
+
+    const pathD = points.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const areaD = pathD + ` L${points[points.length-1].x.toFixed(1)},${H-PAD} L${points[0].x.toFixed(1)},${H-PAD} Z`;
+
+    // Goal zone (95-100kg)
+    const goalTopY = PAD + (H - PAD*2) * (1 - (100 - minW) / range);
+    const goalBotY = PAD + (H - PAD*2) * (1 - (95 - minW) / range);
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+      <rect x="${PAD}" y="${goalTopY}" width="${W-PAD*2}" height="${goalBotY-goalTopY}" fill="#22c55e" opacity="0.08"/>
+      <line x1="${PAD}" y1="${goalTopY}" x2="${W-PAD}" y2="${goalTopY}" stroke="#22c55e" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="${PAD}" y1="${goalBotY}" x2="${W-PAD}" y2="${goalBotY}" stroke="#22c55e" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <defs><linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#818cf8" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${areaD}" fill="url(#grad1)"/>
+      <path d="${pathD}" fill="none" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+    points.forEach((p,i)=>{
+      const isLast = i === points.length-1;
+      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast?5:3}" fill="${isLast?'#f97316':'#818cf8'}" stroke="#111827" stroke-width="1.5"/>`;
+    });
+
+    svg += `</svg>`;
+    graphCard.innerHTML += svg;
+
+    // Legend
+    graphCard.appendChild(div({display:"flex",gap:"14px",marginTop:"10px",fontSize:"10px",color:"#6b7280"},
+      `<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;opacity:0.4;margin-right:4px"></span>Zone objectif (95-100kg)</span>
+       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f97316;margin-right:4px"></span>Dernière pesée</span>`));
+
+    root.appendChild(graphCard);
+  } else {
+    root.appendChild(div({background:"#111827",border:"1px dashed #1f2937",borderRadius:"12px",padding:"30px 16px",textAlign:"center",marginBottom:"16px"},
+      `<div style="font-size:28px;margin-bottom:8px">⚖️</div>
+       <div style="color:#6b7280;font-size:12px">Ajoute au moins 2 pesées pour voir ton graphique de progression.</div>`));
+  }
+
+  // ── History list ──
+  if(entries.length > 0){
+    const histCard = div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"16px"});
+    histCard.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#818cf8",marginBottom:"10px"},"📋 HISTORIQUE DES PESÉES"));
+
+    [...entries].reverse().forEach((e,idx)=>{
+      const realIdx = entries.length - 1 - idx;
+      const prevEntry = entries[realIdx-1];
+      const diff = prevEntry ? (e.weight - prevEntry.weight) : null;
+
+      const row = div({display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:idx>0?"1px solid #1f2937":"none"});
+      const dateObj = new Date(e.date+"T12:00:00");
+      const dateLabel = dateObj.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+
+      const left = div({},`<span style="font-size:12px;color:#d1d5db">${dateLabel}</span>`);
+      const right = div({display:"flex",alignItems:"center",gap:"8px"});
+      right.innerHTML = `<span style="font-size:15px;font-weight:700;color:#e2e8f0">${e.weight}kg</span>
+        ${diff!==null?`<span style="font-size:10px;color:${diff<0?'#22c55e':diff>0?'#ef4444':'#6b7280'}">${diff>0?'+':''}${diff.toFixed(1)}kg</span>`:''}`;
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑️";
+      Object.assign(delBtn.style,{background:"transparent",border:"none",color:"#ef4444",fontSize:"12px",padding:"4px 6px",marginLeft:"6px",opacity:"0.6"});
+      delBtn.onclick = ()=>{
+        STATE.bodyweight = STATE.bodyweight.filter(x=>x.date!==e.date);
+        save("pl_bw", STATE.bodyweight);
+        renderTab("weight", renderWeight);
+      };
+      right.appendChild(delBtn);
+
+      row.appendChild(left);
+      row.appendChild(right);
+      histCard.appendChild(row);
+    });
+    root.appendChild(histCard);
+  }
 }
 
 // ── HISTORY TAB ───────────────────────────────────────────────────────────────
