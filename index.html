@@ -877,6 +877,8 @@ function renderSession(root){
 
 function setWeek(i){STATE.week=i;STATE.dayIdx=0;STATE.log={};save("pl_st",{id:STATE.activeId,week:i,day:0});renderTab("session",renderSession);}
 window.setWeek=setWeek;
+window.goTab=goTab;
+window.addBodyweight=addBodyweight;
 
 function updateE1rmDisplay(i,ex,old){}
 
@@ -1084,9 +1086,185 @@ function renderWeight(root){
 }
 
 // ── HISTORY TAB ───────────────────────────────────────────────────────────────
+// ── e1RM history from sessions ────────────────────────────────────────────────
+function getE1rmHistory(lift){
+  const points=[];
+  STATE.history.forEach(s=>{
+    (s.exercises||[]).forEach(ex=>{
+      if(ex.lift===lift && ex.weight && ex.actualRpe && ex.e1rm){
+        points.push({date:s.date, e1rm:ex.e1rm, weight:ex.weight, rpe:ex.actualRpe, reps:ex.reps, block:s.blockName});
+      }
+    });
+  });
+  // dedupe: garder le max e1RM par date
+  const byDate={};
+  points.forEach(p=>{ if(!byDate[p.date]||p.e1rm>byDate[p.date].e1rm) byDate[p.date]=p; });
+  return Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function e1rmGraphSVG(points, color){
+  if(points.length<2) return null;
+  const W=600,H=160,PAD=28;
+  const vals=points.map(p=>p.e1rm);
+  const minV=Math.min(...vals)*0.95;
+  const maxV=Math.max(...vals)*1.03;
+  const range=maxV-minV||1;
+  const xStep=(W-PAD*2)/Math.max(points.length-1,1);
+  const pts=points.map((p,i)=>({
+    x:PAD+i*xStep,
+    y:PAD+(H-PAD*2)*(1-(p.e1rm-minV)/range),
+    ...p
+  }));
+  const pathD=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaD=pathD+` L${pts[pts.length-1].x.toFixed(1)},${H-PAD} L${pts[0].x.toFixed(1)},${H-PAD} Z`;
+  const gradId=`g${color.replace("#","")}`;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${areaD}" fill="url(#${gradId})"/>
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  pts.forEach((p,i)=>{
+    const isLast=i===pts.length-1;
+    svg+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast?5:3}" fill="${isLast?color:'#111827'}" stroke="${color}" stroke-width="2"/>`;
+    if(isLast) svg+=`<text x="${Math.min(p.x+8,W-40)}" y="${p.y-8}" fill="${color}" font-size="11" font-weight="700">${p.e1rm}kg</text>`;
+  });
+  // Y axis labels
+  svg+=`<text x="2" y="${PAD+4}" fill="#6b7280" font-size="9">${Math.round(maxV)}</text>`;
+  svg+=`<text x="2" y="${H-PAD+4}" fill="#6b7280" font-size="9">${Math.round(minV)}</text>`;
+  svg+=`</svg>`;
+  return svg;
+}
+
+let HIST_TAB="sessions"; // "sessions" | "e1rm"
+
 function renderHistory(root){
-  root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"16px"},"HISTORIQUE"));
-  // e1RM
+  // Title + tab switcher
+  root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"12px"},"HISTORIQUE"));
+
+  const switcher=div({display:"flex",gap:"6px",marginBottom:"16px"});
+  [["sessions","📋 Séances"],["e1rm","📈 Suivi e1RM"]].forEach(([key,label])=>{
+    const active=HIST_TAB===key;
+    const b=btn(label,{
+      flex:"1",background:active?"rgba(79,70,229,.28)":"#1f2937",
+      border:`1px solid ${active?"#4f46e5":"#374151"}`,
+      color:active?"#818cf8":"#6b7280",
+      padding:"9px",borderRadius:"8px",fontSize:"12px",fontWeight:active?"700":"400",
+    },()=>{ HIST_TAB=key; renderTab("history",renderHistory); });
+    switcher.appendChild(b);
+  });
+  root.appendChild(switcher);
+
+  // ── TAB : e1RM ──
+  if(HIST_TAB==="e1rm"){
+    const LIFTS=[
+      {name:"Squat",       color:"#818cf8", emoji:"🦵"},
+      {name:"Bench Press", color:"#06b6d4", emoji:"💪"},
+      {name:"Deadlift",    color:"#f97316", emoji:"⛓️"},
+    ];
+
+    // Current bests
+    const bestRow=div({display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px",marginBottom:"20px"});
+    LIFTS.forEach(({name,color,emoji})=>{
+      const pts=getE1rmHistory(name);
+      const best=pts.length?Math.max(...pts.map(p=>p.e1rm)):null;
+      const last=pts.length?pts[pts.length-1]:null;
+      bestRow.appendChild(div({background:"#111827",border:`1px solid ${color}40`,borderRadius:"10px",padding:"12px",textAlign:"center"},
+        `<div style="font-size:16px">${emoji}</div>
+         <div style="font-size:9px;color:#6b7280;margin-top:4px;letter-spacing:1px">${name==="Bench Press"?"BENCH":name.toUpperCase()}</div>
+         <div style="font-size:20px;font-weight:800;color:${color};margin-top:2px">${best?best+"kg":"—"}</div>
+         <div style="font-size:8px;color:#4b5563;margin-top:2px">PR e1RM</div>`));
+    });
+    root.appendChild(bestRow);
+
+    // Graph per lift
+    LIFTS.forEach(({name,color,emoji})=>{
+      const pts=getE1rmHistory(name);
+      const card=div({background:"#111827",border:`1px solid ${color}25`,borderRadius:"12px",padding:"16px",marginBottom:"14px"});
+
+      // Header
+      const hdr=div({display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"});
+      hdr.innerHTML=`<div style="font-size:14px;font-weight:700;color:${color}">${emoji} ${name}</div>
+        <div style="font-size:11px;color:#6b7280">${pts.length} mesure${pts.length>1?"s":""}</div>`;
+      card.appendChild(hdr);
+
+      if(pts.length===0){
+        card.appendChild(div({fontSize:"11px",color:"#4b5563",textAlign:"center",padding:"16px"},
+          "Pas encore de données — commence à t'entraîner !"));
+      } else if(pts.length===1){
+        card.appendChild(div({background:"#0d1117",borderRadius:"8px",padding:"10px",textAlign:"center"},
+          `<div style="font-size:11px;color:#6b7280">Première mesure</div>
+           <div style="font-size:24px;font-weight:800;color:${color};margin-top:4px">${pts[0].e1rm} kg</div>
+           <div style="font-size:10px;color:#6b7280;margin-top:2px">${pts[0].date}</div>`));
+        card.appendChild(div({fontSize:"10px",color:"#4b5563",marginTop:"8px",textAlign:"center"},
+          "Ajoute une 2ème séance pour voir ton graphique de progression."));
+      } else {
+        // SVG graph
+        const graphHTML=e1rmGraphSVG(pts,color);
+        if(graphHTML){
+          const graphDiv=document.createElement("div");
+          graphDiv.innerHTML=graphHTML;
+          card.appendChild(graphDiv);
+        }
+
+        // Progression stat
+        const first=pts[0], last=pts[pts.length-1];
+        const gain=last.e1rm-first.e1rm;
+        card.appendChild(div({display:"flex",gap:"8px",marginTop:"10px"},
+          `<div style="flex:1;background:#0d1117;border-radius:7px;padding:8px;text-align:center">
+             <div style="font-size:8px;color:#6b7280">DÉPART</div>
+             <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-top:2px">${first.e1rm}kg</div>
+             <div style="font-size:8px;color:#4b5563">${first.date}</div>
+           </div>
+           <div style="flex:1;background:#0d1117;border-radius:7px;padding:8px;text-align:center">
+             <div style="font-size:8px;color:#6b7280">ACTUEL</div>
+             <div style="font-size:14px;font-weight:700;color:${color};margin-top:2px">${last.e1rm}kg</div>
+             <div style="font-size:8px;color:#4b5563">${last.date}</div>
+           </div>
+           <div style="flex:1;background:#0d1117;border-radius:7px;padding:8px;text-align:center">
+             <div style="font-size:8px;color:#6b7280">GAIN</div>
+             <div style="font-size:14px;font-weight:700;color:${gain>=0?"#22c55e":"#ef4444"};margin-top:2px">${gain>=0?"+":""}${gain}kg</div>
+             <div style="font-size:8px;color:#4b5563">${pts.length} séances</div>
+           </div>`));
+
+        // Last 5 entries
+        const recent=div({marginTop:"10px"});
+        recent.appendChild(div({fontSize:"9px",color:"#4b5563",letterSpacing:"1px",marginBottom:"6px"},"5 DERNIÈRES MESURES"));
+        [...pts].reverse().slice(0,5).forEach((p,i)=>{
+          const prevP=[...pts].reverse()[i+1];
+          const d=prevP?(p.e1rm-prevP.e1rm):null;
+          const row=div({display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderTop:"1px solid #1f2937",fontSize:"11px"});
+          row.innerHTML=`<span style="color:#6b7280">${p.date}</span>
+            <span style="color:#e2e8f0;font-weight:600">${p.weight}kg × ${p.reps} reps</span>
+            <span style="color:${color};font-weight:700">${p.e1rm}kg</span>
+            ${d!==null?`<span style="font-size:10px;color:${d>=0?"#22c55e":"#ef4444"}">${d>=0?"+":""}${d}</span>`:"<span></span>"}`;
+          recent.appendChild(row);
+        });
+        card.appendChild(recent);
+      }
+
+      // Manual e1RM override
+      const manualRow=div({display:"flex",gap:"6px",alignItems:"center",marginTop:"10px",padding:"8px",background:"#0d1117",borderRadius:"8px"});
+      manualRow.appendChild(div({fontSize:"9px",color:"#6b7280",flexShrink:"0"},"Max manuel :"));
+      const mInput=document.createElement("input");
+      mInput.type="number";mInput.step="0.5";
+      mInput.value=STATE.e1rms[name]||"";mInput.placeholder="kg";
+      Object.assign(mInput.style,{flex:"1",background:"#111827",border:"1px solid #374151",borderRadius:"6px",color:"#e2e8f0",padding:"6px 8px",fontSize:"13px",fontWeight:"600",fontFamily:"inherit",outline:"none"});
+      manualRow.appendChild(mInput);
+      manualRow.appendChild(btn("✓",{background:color,color:"#fff",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"700"},()=>{
+        const v=parseFloat(mInput.value);
+        if(v>0){STATE.e1rms[name]=Math.max(STATE.e1rms[name]||0,v);save("pl_e1rm",STATE.e1rms);}
+      }));
+      card.appendChild(manualRow);
+
+      root.appendChild(card);
+    });
+
+    return;
+  }
+
+  // ── TAB : SÉANCES ──
   const lifts=["Squat","Bench Press","Deadlift"].filter(l=>STATE.e1rms[l]);
   if(lifts.length){
     const grid=div({display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px",marginBottom:"16px"});
@@ -1098,18 +1276,16 @@ function renderHistory(root){
     });
     root.appendChild(grid);
   }
+
   if(!STATE.history.length){
     root.appendChild(div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"40px 16px",textAlign:"center"},
       `<div style="font-size:32px;margin-bottom:10px">📋</div><div style="color:#6b7280;font-size:13px">Aucune séance enregistrée.</div>`));
     return;
   }
 
-  // Sessions — affichées du plus récent au plus ancien
   [...STATE.history].map((s,realIdx)=>({s,realIdx})).reverse().forEach(({s,realIdx})=>{
     const bt=BLOCKS.find(b=>b.id===s.blockId);
     const card=div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"14px",marginBottom:"8px"});
-
-    // Header
     const hdr=div({display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px",gap:"8px"});
     const hdrLeft=div({display:"flex",alignItems:"center",gap:"8px",flex:"1",minWidth:"0"});
     hdrLeft.innerHTML=`
@@ -1118,43 +1294,23 @@ function renderHistory(root){
         <div style="font-size:13px;font-weight:700;color:${bt?.color||"#818cf8"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.blockName} — S${s.week} ${s.weekLabel||""}</div>
         <div style="font-size:10px;color:#6b7280">${s.day||""} · ${s.date}</div>
       </div>`;
-
-    // Zone de confirmation inline (cachée au départ)
     const confirmZone=div({display:"none",alignItems:"center",gap:"6px",marginTop:"8px",padding:"8px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:"8px"});
     confirmZone.innerHTML=`<span style="font-size:11px;color:#ef4444;flex:1">Supprimer cette séance ?</span>`;
-
     const btnOui=document.createElement("button");
     btnOui.textContent="Oui";
     Object.assign(btnOui.style,{background:"#ef4444",border:"none",color:"#fff",padding:"5px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:"700"});
-    btnOui.onclick=()=>{
-      STATE.history.splice(realIdx,1);
-      save("pl_hist",STATE.history);
-      renderTab("history",renderHistory);
-    };
-
+    btnOui.onclick=()=>{STATE.history.splice(realIdx,1);save("pl_hist",STATE.history);renderTab("history",renderHistory);};
     const btnNon=document.createElement("button");
     btnNon.textContent="Non";
     Object.assign(btnNon.style,{background:"#374151",border:"none",color:"#e2e8f0",padding:"5px 12px",borderRadius:"6px",fontSize:"12px"});
-    btnNon.onclick=()=>{ confirmZone.style.display="none"; delOne.style.opacity="1"; };
-
-    confirmZone.appendChild(btnOui);
-    confirmZone.appendChild(btnNon);
-
-    // Bouton poubelle
+    btnNon.onclick=()=>{confirmZone.style.display="none";delOne.style.opacity="1";};
+    confirmZone.appendChild(btnOui);confirmZone.appendChild(btnNon);
     const delOne=document.createElement("button");
     delOne.textContent="🗑️";
     Object.assign(delOne.style,{background:"rgba(239,68,68,.12)",border:"1px solid rgba(239,68,68,.3)",color:"#ef4444",padding:"5px 9px",borderRadius:"7px",fontSize:"14px",flexShrink:"0"});
-    delOne.onclick=()=>{
-      confirmZone.style.display="flex";
-      delOne.style.opacity="0.4";
-    };
-
-    hdr.appendChild(hdrLeft);
-    hdr.appendChild(delOne);
-    card.appendChild(hdr);
-    card.appendChild(confirmZone);
-
-    // Exercices
+    delOne.onclick=()=>{confirmZone.style.display="flex";delOne.style.opacity="0.4";};
+    hdr.appendChild(hdrLeft);hdr.appendChild(delOne);
+    card.appendChild(hdr);card.appendChild(confirmZone);
     (s.exercises||[]).forEach((ex,j)=>{
       const row=div({display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderTop:"1px solid #1f2937",fontSize:"12px",gap:"6px"});
       row.innerHTML=`<span style="color:#d1d5db;flex:1">${ex.lift}</span>
@@ -1166,7 +1322,6 @@ function renderHistory(root){
     root.appendChild(card);
   });
 
-  // Bouton tout effacer
   const delBtn=btn("🗑️ Effacer tout l'historique",{marginTop:"8px",background:"#1f2937",border:"1px solid #991b1b",color:"#ef4444",padding:"8px 16px",borderRadius:"8px",fontSize:"12px"},()=>{
     if(confirm("Effacer tout l'historique ?")){STATE.history=[];STATE.e1rms={};save("pl_hist",[]);save("pl_e1rm",{});renderTab("history",renderHistory);}
   });
