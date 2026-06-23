@@ -762,6 +762,88 @@ function renderSession(root){
   });
   root.appendChild(dayRow);
 
+  // ── ÉCHAUFFEMENT ──────────────────────────────────────────────────────────
+  const warmupCard=div({background:"#111827",border:"1px solid #f59e0b30",borderRadius:"12px",padding:"14px",marginBottom:"14px"});
+  const warmupHdr=div({display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"});
+  warmupHdr.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:16px">🔥</span>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f59e0b">ÉCHAUFFEMENT</div>
+      <div style="font-size:10px;color:#6b7280">10–15 min avant de charger</div>
+    </div>
+  </div>
+  <span id="warmup-arrow" style="color:#f59e0b;font-size:14px">▼</span>`;
+
+  const warmupBody=div({display:"none",marginTop:"12px"});
+
+  // Échauffement général
+  warmupBody.appendChild(div({fontSize:"10px",color:"#f59e0b",letterSpacing:"1px",marginBottom:"8px",fontWeight:"700"},"① ACTIVATION GÉNÉRALE — 3 min"));
+  [
+    ["🚶","Marche rapide / vélo","3 min","Monter le rythme cardiaque doucement"],
+    ["🙆","Bras en cercle","10×","Mobiliser les épaules"],
+    ["🔄","Rotation du bassin","10×","Activer les hanches"],
+  ].forEach(([e,name,reps,desc])=>{
+    warmupBody.appendChild(div({display:"flex",alignItems:"center",gap:"10px",padding:"6px 0",borderBottom:"1px solid #1f2937"},
+      `<span style="font-size:16px;flex-shrink:0">${e}</span>
+       <div style="flex:1">
+         <div style="font-size:12px;color:#e2e8f0;font-weight:600">${name} <span style="color:#f59e0b;font-weight:700">${reps}</span></div>
+         <div style="font-size:10px;color:#6b7280">${desc}</div>
+       </div>`));
+  });
+
+  // Mobilité spécifique PL
+  warmupBody.appendChild(div({fontSize:"10px",color:"#f59e0b",letterSpacing:"1px",margin:"10px 0 8px",fontWeight:"700"},"② MOBILITÉ SPÉCIFIQUE — 5 min"));
+  [
+    ["🦵","Squat goblet avec pause","3×5","Buste droit, pause 3sec en bas","#818cf8"],
+    ["⚡","Hip flexor stretch","45s/côté","Genou au sol, bassin en avant","#818cf8"],
+    ["🦶","Mobilité cheville","10×/côté","Genou touche le mur, talon au sol","#22c55e"],
+    ["💪","Band pull-apart","15×","Élastique devant soi, tirer vers l'arrière","#06b6d4"],
+    ["🔄","Cat-camel","10×","À 4 pattes, dos en arche puis creux","#f97316"],
+  ].forEach(([e,name,reps,desc,c])=>{
+    warmupBody.appendChild(div({display:"flex",alignItems:"center",gap:"10px",padding:"6px 0",borderBottom:"1px solid #1f2937"},
+      `<span style="font-size:15px;flex-shrink:0">${e}</span>
+       <div style="flex:1">
+         <div style="font-size:12px;color:#e2e8f0;font-weight:600">${name} <span style="color:${c};font-weight:700">${reps}</span></div>
+         <div style="font-size:10px;color:#6b7280">${desc}</div>
+       </div>`));
+  });
+
+  // Séries d'activation à vide
+  const exsDay=getExs(block,STATE.week,STATE.dayIdx);
+  const mainLifts=[...new Set(exsDay.map(e=>e.lift))].slice(0,2);
+  if(mainLifts.length){
+    warmupBody.appendChild(div({fontSize:"10px",color:"#f59e0b",letterSpacing:"1px",margin:"10px 0 8px",fontWeight:"700"},"③ ACTIVATION SUR BARRE — avant chaque mouvement"));
+    mainLifts.forEach(lift=>{
+      const sugg=getSugg({lift,reps:5,targetRpe:7})||100;
+      const pct=(p)=>Math.round(sugg*p/2.5)*2.5;
+      warmupBody.appendChild(div({background:"#0d1117",borderRadius:"8px",padding:"10px",marginBottom:"6px"},
+        `<div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:6px">${lift}</div>
+         ${[[1,5,"Barre à vide"],[0.4,5,`~${pct(0.4)}kg`],[0.6,3,`~${pct(0.6)}kg`],[0.75,2,`~${pct(0.75)}kg`],[0.9,1,`~${pct(0.9)}kg`]].map(([pct2,reps,label])=>`
+           <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-top:1px solid #1f2937;color:#9ca3af">
+             <span>${label}</span>
+             <span style="color:#f59e0b;font-weight:600">${reps} rep${reps>1?"s":""}</span>
+             <span style="color:#6b7280">RPE ~${pct2<0.5?"5":pct2<0.7?"6":pct2<0.8?"7":"8"}</span>
+           </div>`).join("")}`));
+    });
+  }
+
+  // Timer échauffement
+  const timerWarmupRow=div({display:"flex",gap:"6px",marginTop:"10px",flexWrap:"wrap",alignItems:"center"});
+  timerWarmupRow.appendChild(div({fontSize:"9px",color:"#6b7280",flexShrink:"0"}),"⏱ Lancer timer :");
+  [["10 min",600],["15 min",900]].forEach(([label,secs])=>{
+    timerWarmupRow.appendChild(btn(label,{background:"#1f2937",border:"1px solid #f59e0b40",color:"#f59e0b",padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:"600"},()=>startTimer(secs)));
+  });
+  warmupBody.appendChild(timerWarmupRow);
+
+  warmupHdr.onclick=()=>{
+    const open=warmupBody.style.display==="block";
+    warmupBody.style.display=open?"none":"block";
+    document.getElementById("warmup-arrow").textContent=open?"▼":"▲";
+  };
+  warmupCard.appendChild(warmupHdr);
+  warmupCard.appendChild(warmupBody);
+  root.appendChild(warmupCard);
+
   // Exercise cards
   const exs=getExs(block,STATE.week,STATE.dayIdx);
   exs.forEach((ex,i)=>{
@@ -1177,6 +1259,71 @@ function renderHistory(root){
          <div style="font-size:8px;color:#4b5563;margin-top:2px">PR e1RM</div>`));
     });
     root.appendChild(bestRow);
+
+    // ── TOTAL POWERLIFTING ────────────────────────────────────────────────
+    const sq=STATE.e1rms["Squat"]||0;
+    const bp=STATE.e1rms["Bench Press"]||0;
+    const dl=STATE.e1rms["Deadlift"]||0;
+    const total=sq+bp+dl;
+
+    const totalCard=div({background:"linear-gradient(135deg,rgba(79,70,229,.15),rgba(79,70,229,.05))",border:"1.5px solid #4f46e545",borderRadius:"12px",padding:"16px",marginBottom:"20px"});
+    totalCard.innerHTML=`<div style="font-size:11px;font-weight:700;color:#818cf8;letter-spacing:1px;margin-bottom:12px">🏆 TOTAL POWERLIFTING</div>`;
+
+    if(!total){
+      totalCard.innerHTML+=`<div style="font-size:12px;color:#6b7280;text-align:center;padding:8px">Enregistre des séances pour voir ton total apparaître automatiquement.</div>`;
+    } else {
+      // Total + ratio
+      const bw=STATE.bodyweight.length?STATE.bodyweight[STATE.bodyweight.length-1].weight:115;
+      const ratio=(total/bw).toFixed(2);
+
+      // Wilks 2020 (coefficients homme)
+      const wilksCoeffs=[-216.0475144,16.2606339,-0.002388645,-0.00113732,7.01863e-6,-1.291e-8];
+      const denom=wilksCoeffs.reduce((acc,c,i)=>acc+c*Math.pow(bw,i),0);
+      const wilks=denom>0?Math.round(total*(600/denom)):0;
+
+      // Dots 2019 (homme)
+      const dotsCoeffs=[-307.75076,24.0900756,-0.1918759221,0.0007391293,0.0000025e-4];
+      const dotsDenom=dotsCoeffs.reduce((acc,c,i)=>acc+c*Math.pow(bw,i),0.0);
+      const dots=dotsDenom>0?Math.round(500*(total/dotsDenom)):0;
+
+      // Niveau indicatif
+      let level="",levelColor="#6b7280";
+      if(wilks<200){level="Débutant";levelColor="#6b7280";}
+      else if(wilks<300){level="Intermédiaire";levelColor="#22c55e";}
+      else if(wilks<400){level="Avancé";levelColor="#eab308";}
+      else if(wilks<500){level="Elite";levelColor="#ef4444";}
+      else{level="World class";levelColor="#a855f7";}
+
+      totalCard.innerHTML+=`
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:42px;font-weight:900;color:#818cf8;line-height:1">${total}<span style="font-size:18px">kg</span></div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">SQ ${sq}kg + BP ${bp}kg + DL ${dl}kg</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:9px;color:#6b7280;letter-spacing:1px">RATIO</div>
+            <div style="font-size:18px;font-weight:800;color:#e2e8f0;margin-top:2px">${ratio}×</div>
+            <div style="font-size:8px;color:#6b7280">poids corps</div>
+          </div>
+          <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:9px;color:#6b7280;letter-spacing:1px">WILKS</div>
+            <div style="font-size:18px;font-weight:800;color:#818cf8;margin-top:2px">${wilks}</div>
+            <div style="font-size:8px;color:#6b7280">points</div>
+          </div>
+          <div style="background:#0d1117;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:9px;color:#6b7280;letter-spacing:1px">DOTS</div>
+            <div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:2px">${dots}</div>
+            <div style="font-size:8px;color:#6b7280">points</div>
+          </div>
+        </div>
+        <div style="background:#0d1117;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:12px;color:#e2e8f0;font-weight:600">Niveau</div>
+          <div style="font-size:13px;font-weight:800;color:${levelColor}">${level}</div>
+        </div>
+        <div style="font-size:9px;color:#374151;margin-top:8px;text-align:center">Wilks & DOTS basés sur e1RM estimés · ${bw}kg poids de corps</div>`;
+    }
+    totalCard.appendChild(div({},""));
+    root.appendChild(totalCard);
 
     // Graph per lift
     LIFTS.forEach(({name,color,emoji})=>{
