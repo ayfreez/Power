@@ -1226,7 +1226,7 @@ function renderHistory(root){
   root.appendChild(div({fontSize:"18px",fontWeight:"800",letterSpacing:"2px",marginBottom:"12px"},"HISTORIQUE"));
 
   const switcher=div({display:"flex",gap:"6px",marginBottom:"16px"});
-  [["sessions","📋 Séances"],["e1rm","📈 Suivi e1RM"]].forEach(([key,label])=>{
+  [["sessions","📋 Séances"],["e1rm","📈 e1RM"],["blocs","📊 Blocs"]].forEach(([key,label])=>{
     const active=HIST_TAB===key;
     const b=btn(label,{
       flex:"1",background:active?"rgba(79,70,229,.28)":"#1f2937",
@@ -1407,6 +1407,245 @@ function renderHistory(root){
 
       root.appendChild(card);
     });
+
+    // ── PRÉDICTION DE PROGRESSION ─────────────────────────────────────────
+    const predCard=div({background:"#111827",border:"1.5px solid #a855f730",borderRadius:"12px",padding:"16px",marginBottom:"14px"});
+    predCard.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#a855f7",marginBottom:"4px"},"🔮 PRÉDICTION DE PROGRESSION"));
+    predCard.appendChild(div({fontSize:"10px",color:"#6b7280",marginBottom:"14px"},"Basée sur ta vitesse de progression actuelle · Estimation sur 3, 6 et 12 mois"));
+
+    const LIFTS_P=["Squat","Bench Press","Deadlift"];
+    const LIFT_COLOR_P={"Squat":"#818cf8","Bench Press":"#06b6d4","Deadlift":"#f97316"};
+    const LIFT_EMOJI_P={"Squat":"🦵","Bench Press":"💪","Deadlift":"⛓️"};
+
+    let hasPredData=false;
+
+    LIFTS_P.forEach(lift=>{
+      const pts=getE1rmHistory(lift);
+      if(pts.length<2) return;
+      hasPredData=true;
+
+      // Régression linéaire simple sur les points e1RM
+      const n=pts.length;
+      // Convertit les dates en jours depuis le premier point
+      const t0=new Date(pts[0].date).getTime();
+      const xs=pts.map(p=>(new Date(p.date).getTime()-t0)/(1000*60*60*24));
+      const ys=pts.map(p=>p.e1rm);
+      const sumX=xs.reduce((a,b)=>a+b,0);
+      const sumY=ys.reduce((a,b)=>a+b,0);
+      const sumXY=xs.reduce((a,x,i)=>a+x*ys[i],0);
+      const sumX2=xs.reduce((a,x)=>a+x*x,0);
+      const denom=n*sumX2-sumX*sumX;
+      const slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0; // kg/jour
+      const intercept=(sumY-slope*sumX)/n;
+      const current=ys[ys.length-1];
+
+      // Prédictions
+      const pred3m=Math.round((intercept+slope*90)*10)/10;
+      const pred6m=Math.round((intercept+slope*180)*10)/10;
+      const pred12m=Math.round((intercept+slope*365)*10)/10;
+      const gain3m=Math.round((pred3m-current)*10)/10;
+      const gain6m=Math.round((pred6m-current)*10)/10;
+      const gain12m=Math.round((pred12m-current)*10)/10;
+
+      // Vitesse de progression
+      const kgPerWeek=Math.round(slope*7*10)/10;
+      const color=LIFT_COLOR_P[lift];
+
+      const row=div({background:"#0d1117",borderRadius:"10px",padding:"12px",marginBottom:"8px"});
+
+      // Header lift
+      row.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:16px">${LIFT_EMOJI_P[lift]}</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:${color}">${lift==="Bench Press"?"Bench Press":lift}</div>
+            <div style="font-size:9px;color:#6b7280">Progression : <span style="color:${kgPerWeek>=0?"#22c55e":"#ef4444"};font-weight:700">${kgPerWeek>=0?"+":""}${kgPerWeek} kg/semaine</span></div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:800;color:${color}">${current}kg</div>
+          <div style="font-size:9px;color:#6b7280">e1RM actuel</div>
+        </div>
+      </div>`;
+
+      // Barres de prédiction
+      const maxPred=Math.max(pred3m,pred6m,pred12m,current);
+      const minPred=Math.min(current)*0.95;
+      const predRange=maxPred-minPred||1;
+
+      [[pred3m,gain3m,"3 mois"],[pred6m,gain6m,"6 mois"],[pred12m,gain12m,"12 mois"]].forEach(([pred,gain,label])=>{
+        const pct=Math.max(0,Math.min(100,((pred-minPred)/predRange)*100));
+        const gc=gain>=0?"#22c55e":"#ef4444";
+        const predRow=div({marginBottom:"6px"});
+        predRow.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <span style="font-size:10px;color:#6b7280">${label}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;font-weight:700;color:#e2e8f0">${pred>0?pred:"—"}kg</span>
+            <span style="font-size:10px;font-weight:700;color:${gc}">${gain>=0?"+":""}${gain}kg</span>
+          </div>
+        </div>
+        <div style="background:#1f2937;border-radius:4px;height:6px;overflow:hidden">
+          <div style="background:linear-gradient(90deg,${color}80,${color});height:100%;width:${pct}%;border-radius:4px;transition:width .5s"></div>
+        </div>`;
+        row.appendChild(predRow);
+      });
+
+      // Avertissement si pas assez de données
+      if(pts.length<5){
+        const warn=div({marginTop:"8px",padding:"7px 10px",background:"rgba(234,179,8,.08)",borderLeft:"3px solid #eab308",borderRadius:"5px"});
+        warn.innerHTML=`<div style="font-size:10px;color:#eab308">⚠️ Prédiction peu fiable — ${pts.length} mesure${pts.length>1?"s":""} seulement. Plus tu enregistres de séances, plus la prédiction sera précise.</div>`;
+        row.appendChild(warn);
+      }
+
+      predCard.appendChild(row);
+    });
+
+    if(!hasPredData){
+      predCard.appendChild(div({fontSize:"11px",color:"#6b7280",textAlign:"center",padding:"16px"},
+        "Pas encore assez de données.\nEnregistre au moins 2 séances par mouvement pour voir les prédictions."));
+    } else {
+      // Note méthodologique
+      predCard.appendChild(div({fontSize:"9px",color:"#374151",marginTop:"8px",padding:"8px",background:"#0d1117",borderRadius:"6px",lineHeight:"1.5"},
+        "💡 Prédiction basée sur une régression linéaire de ton historique e1RM. Les gains réels peuvent varier selon la récupération, la nutrition et l'intensité des blocs."));
+    }
+
+    root.appendChild(predCard);
+
+    return;
+  }
+
+  // ── TAB : BLOCS ──
+  if(HIST_TAB==="blocs"){
+    root.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#818cf8",marginBottom:"4px"},"📊 COMPARATEUR DE BLOCS"));
+    root.appendChild(div({fontSize:"10px",color:"#6b7280",marginBottom:"14px"},"Compare tes e1RM au début et à la fin de chaque bloc complété."));
+
+    // Récupère tous les blocs uniques dans l'historique
+    const blocIds=[...new Set(STATE.history.map(s=>s.blockId))].filter(Boolean);
+
+    if(!blocIds.length){
+      root.appendChild(div({background:"#111827",border:"1px dashed #1f2937",borderRadius:"12px",padding:"40px 16px",textAlign:"center"},
+        `<div style="font-size:28px;margin-bottom:10px">📊</div>
+         <div style="color:#6b7280;font-size:12px">Aucun bloc enregistré.<br>Commence à t'entraîner pour voir la comparaison.</div>`));
+      return;
+    }
+
+    const LIFTS_C=["Squat","Bench Press","Deadlift"];
+
+    blocIds.forEach(blockId=>{
+      const blockSessions=STATE.history.filter(s=>s.blockId===blockId);
+      if(!blockSessions.length) return;
+
+      const bt=BLOCKS.find(b=>b.id===blockId);
+      const color=bt?.color||"#818cf8";
+      const emoji=bt?.emoji||"📦";
+      const name=bt?.name||blockId;
+
+      // Semaines présentes
+      const weeks=[...new Set(blockSessions.map(s=>s.week))].sort((a,b)=>a-b);
+      const firstWeek=weeks[0], lastWeek=weeks[weeks.length-1];
+
+      // e1RM par mouvement : première semaine vs dernière semaine
+      const firstSessions=blockSessions.filter(s=>s.week===firstWeek);
+      const lastSessions=blockSessions.filter(s=>s.week===lastWeek);
+
+      function bestE1rmInSessions(sessions, lift){
+        let best=0;
+        sessions.forEach(s=>(s.exercises||[]).forEach(ex=>{
+          if(ex.lift===lift && ex.e1rm && ex.e1rm>best) best=ex.e1rm;
+        }));
+        return best||null;
+      }
+
+      const card=div({background:"#111827",border:`1.5px solid ${color}30`,borderRadius:"12px",padding:"16px",marginBottom:"14px"});
+
+      // Header
+      card.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:20px">${emoji}</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:${color}">${name}</div>
+          <div style="font-size:10px;color:#6b7280">S${firstWeek} → S${lastWeek} · ${blockSessions.length} séance${blockSessions.length>1?"s":""}</div>
+        </div>
+      </div>`;
+
+      // Tableau comparatif
+      const table=div({background:"#0d1117",borderRadius:"8px",overflow:"hidden",marginBottom:"10px"});
+
+      // Header table
+      table.innerHTML=`<div style="display:grid;grid-template-columns:1fr 80px 80px 70px;gap:0;padding:7px 10px;background:#1f2937">
+        <div style="font-size:9px;color:#6b7280;letter-spacing:1px">MOUVEMENT</div>
+        <div style="font-size:9px;color:#6b7280;text-align:center">DÉBUT</div>
+        <div style="font-size:9px;color:#6b7280;text-align:center">FIN</div>
+        <div style="font-size:9px;color:#6b7280;text-align:center">GAIN</div>
+      </div>`;
+
+      let hasData=false;
+      LIFTS_C.forEach((lift,i)=>{
+        const start=bestE1rmInSessions(firstSessions,lift);
+        const end=bestE1rmInSessions(lastSessions,lift);
+        if(!start && !end) return;
+        hasData=true;
+        const gain=(start&&end)?(end-start):null;
+        const gainColor=gain===null?"#6b7280":gain>0?"#22c55e":gain<0?"#ef4444":"#6b7280";
+
+        const row=div({display:"grid",gridTemplateColumns:"1fr 80px 80px 70px",gap:0,padding:"9px 10px",borderTop:"1px solid #1f2937"});
+        row.innerHTML=`<div style="font-size:12px;color:#d1d5db;font-weight:600">${lift==="Bench Press"?"Bench":lift}</div>
+          <div style="font-size:12px;color:#6b7280;text-align:center">${start?start+"kg":"—"}</div>
+          <div style="font-size:12px;color:${color};font-weight:700;text-align:center">${end?end+"kg":"—"}</div>
+          <div style="font-size:12px;font-weight:800;color:${gainColor};text-align:center">${gain!==null?(gain>=0?"+":"")+gain+"kg":"—"}</div>`;
+        table.appendChild(row);
+      });
+
+      if(!hasData){
+        table.innerHTML+=`<div style="padding:12px;font-size:11px;color:#4b5563;text-align:center">Pas assez de données pour comparer.</div>`;
+      }
+      card.appendChild(table);
+
+      // Total gain
+      const totalGains=LIFTS_C.map(lift=>{
+        const s=bestE1rmInSessions(firstSessions,lift);
+        const e=bestE1rmInSessions(lastSessions,lift);
+        return(s&&e)?(e-s):0;
+      });
+      const totalGain=totalGains.reduce((a,b)=>a+b,0);
+
+      if(hasData&&totalGain!==0){
+        card.appendChild(div({
+          display:"flex",justifyContent:"space-between",alignItems:"center",
+          padding:"10px 12px",background:`${color}12`,borderRadius:"8px",
+        },`<span style="font-size:11px;color:#6b7280;font-weight:600">Gain total sur le bloc</span>
+           <span style="font-size:16px;font-weight:800;color:${totalGain>0?"#22c55e":"#ef4444"}">${totalGain>0?"+":""}${totalGain} kg</span>`));
+      }
+
+      root.appendChild(card);
+    });
+
+    // Comparaison globale entre blocs si plusieurs blocs
+    if(blocIds.length>=2){
+      const summaryCard=div({background:"#111827",border:"1px solid #4f46e530",borderRadius:"12px",padding:"16px",marginBottom:"14px"});
+      summaryCard.appendChild(div({fontSize:"12px",fontWeight:"700",color:"#818cf8",marginBottom:"12px"}),"🔄 PROGRESSION GLOBALE");
+
+      LIFTS_C.forEach(lift=>{
+        const allE1rms=[];
+        STATE.history.forEach(s=>(s.exercises||[]).forEach(ex=>{
+          if(ex.lift===lift&&ex.e1rm) allE1rms.push({week:s.week,blockId:s.blockId,date:s.date,e1rm:ex.e1rm});
+        }));
+        if(allE1rms.length<2) return;
+        allE1rms.sort((a,b)=>a.date.localeCompare(b.date));
+        const first=allE1rms[0], last=allE1rms[allE1rms.length-1];
+        const gain=last.e1rm-first.e1rm;
+
+        const row=div({display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #1f2937"});
+        row.innerHTML=`<span style="font-size:12px;color:#d1d5db;font-weight:600">${lift==="Bench Press"?"Bench":lift}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:#6b7280">${first.e1rm}kg</span>
+            <span style="color:#374151">→</span>
+            <span style="font-size:13px;font-weight:700;color:#818cf8">${last.e1rm}kg</span>
+            <span style="font-size:12px;font-weight:800;color:${gain>=0?"#22c55e":"#ef4444"}">${gain>=0?"+":""}${gain}kg</span>
+          </div>`;
+        summaryCard.appendChild(row);
+      });
+      root.appendChild(summaryCard);
+    }
 
     return;
   }
