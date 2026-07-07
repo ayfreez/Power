@@ -212,9 +212,9 @@ const BLOCKS = [
    desc:"Bloc de reprise sur mesure après 2 ans d'arrêt. Objectif : retrouver les sensations, réhabituer le corps aux charges, exploiter la mémoire musculaire. Toujours 3-4 reps en réserve, aucune série à l'échec. RPE 6 = très facile, c'est voulu.",
    notes:"🎯 Objectif : technique parfaite + retrouver les sensations\n📹 Filme tes séries de squat, bench et deadlift régulièrement\n🚶 8 000 à 10 000 pas par jour si possible\n🥗 Déficit calorique léger — cible 0.3 à 0.8kg/semaine",
    days:[
-     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:5,r:5,rpe:6},{l:"Bench Press",s:5,r:5,rpe:6},{l:"Rowing",s:4,r:8,rpe:6}]},
-     {name:"Jour 2",label:"DL / Bench serré",exs:[{l:"Deadlift",s:4,r:5,rpe:6},{l:"Bench Serré",s:4,r:6,rpe:6},{l:"Tirage Vertical",s:4,r:8,rpe:6}]},
-     {name:"Jour 3",label:"Squat pause / Bench",exs:[{l:"Squat Pause",s:4,r:4,rpe:6},{l:"Bench Press",s:6,r:4,rpe:6},{l:"Romanian DL",s:3,r:8,rpe:6}]},
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:5,rpe:6},{l:"Bench Press",s:4,r:5,rpe:6},{l:"Rowing",s:3,r:8,rpe:6}]},
+     {name:"Jour 2",label:"DL / Bench serré",exs:[{l:"Deadlift",s:3,r:5,rpe:6},{l:"Bench Serré",s:3,r:6,rpe:6},{l:"Tirage Vertical",s:3,r:8,rpe:6},{l:"Face Pull",s:3,r:15,rpe:6}]},
+     {name:"Jour 3",label:"Squat pause / Bench",exs:[{l:"Squat Pause",s:3,r:4,rpe:6},{l:"Bench Press",s:5,r:4,rpe:6},{l:"Romanian DL",s:2,r:8,rpe:6},{l:"Gainage",s:3,r:1,rpe:6}]},
    ],
    wp:[{lbl:"S1 Intro",ro:0,vm:0.8},{lbl:"S2",ro:0,vm:0.9},{lbl:"S3",ro:0,vm:1},{lbl:"S4",ro:0,vm:1},{lbl:"S5",ro:0.5,vm:1},{lbl:"S6",ro:0.5,vm:1},{lbl:"S7",ro:0.5,vm:1},{lbl:"Deload",ro:-1,vm:0.6}]},
 
@@ -616,6 +616,244 @@ function renderProfile(root){
   Object.assign(qs.style,{width:"100%",background:"#22c55e",border:"none",color:"#fff",padding:"14px",borderRadius:"10px",fontSize:"12px",fontWeight:"700",letterSpacing:"1px",marginBottom:"8px"});
   qs.onclick=()=>{STATE.activeId="perso_reprise";STATE.week=0;STATE.dayIdx=0;STATE.log={};save("pl_st",{id:"perso_reprise",week:0,day:0});goTab("session");};
   root.appendChild(qs);
+
+  // ── GUIDE DES EXERCICES ────────────────────────────────────────────────────
+  const guideBtn=document.createElement("button");
+  guideBtn.innerHTML="📖 GUIDE D'EXÉCUTION — PHASE 1";
+  Object.assign(guideBtn.style,{width:"100%",background:"#1f2937",border:"1px solid #374151",color:"#818cf8",padding:"12px",borderRadius:"10px",fontSize:"12px",fontWeight:"700",letterSpacing:"1px",marginBottom:"16px"});
+  guideBtn.onclick=()=>{
+    const guideSection=document.getElementById("exercise-guide");
+    if(guideSection){
+      const open=guideSection.style.display==="block";
+      guideSection.style.display=open?"none":"block";
+      guideBtn.innerHTML=open?"📖 GUIDE D'EXÉCUTION — PHASE 1":"📖 FERMER LE GUIDE";
+    }
+  };
+  root.appendChild(guideBtn);
+
+  const guide=document.createElement("div");
+  guide.id="exercise-guide";
+  guide.style.display="none";
+
+  const EXERCISES=[
+    {
+      name:"Squat compétition",emoji:"🦵",days:"Jour 1 & 3",color:"#818cf8",
+      setup:"Barre en position low bar (milieu des trapèzes), pieds écartés à largeur d'épaules ou légèrement plus, orteils pointés à 30-45°.",
+      exec:[
+        "Inspire profondément et brace (ventre dur comme si tu allais recevoir un coup de poing)",
+        "Descente contrôlée en poussant les genoux vers l'extérieur dans la direction des orteils",
+        "Descends jusqu'à ce que le pli de hanche passe sous le haut du genou (parallèle)",
+        "Remontée en poussant le sol avec les pieds — pense à 'étaler le sol'",
+        "Expire en haut une fois la rep terminée",
+      ],
+      tips:[
+        "⚠️ Ne laisse pas les genoux rentrer vers l'intérieur en remontant",
+        "💡 Low bar = buste penché vers l'avant, c'est normal",
+        "📹 Filme toujours de profil pour vérifier la profondeur",
+        "🎯 RPE 6 = tu pourrais faire encore 4 reps facilement",
+      ]
+    },
+    {
+      name:"Squat pause",emoji:"⏸️",days:"Jour 3",color:"#818cf8",
+      setup:"Même position que le squat compétition. Barre en low bar.",
+      exec:[
+        "Descente identique au squat compétition",
+        "En position basse : PAUSE complète de 2-3 secondes sans rebondir",
+        "Reste tendu pendant la pause — ne relâche pas le brace",
+        "Remontée explosive après la pause",
+      ],
+      tips:[
+        "💡 Le squat pause renforce la position basse et corrige les compensations",
+        "⚠️ Utilise moins de poids que ton squat normal — c'est voulu",
+        "🎯 La pause doit être vraiment immobile, pas juste lente",
+      ]
+    },
+    {
+      name:"Bench Press compétition",emoji:"💪",days:"Jour 1 & 3",color:"#06b6d4",
+      setup:"Allongé sur le banc, pieds à plat au sol. Arche naturelle dans le dos. Barre au-dessus des yeux. Prise légèrement plus large que la largeur d'épaules.",
+      exec:[
+        "Sors la barre et stabilise au-dessus de la poitrine (bras tendus)",
+        "Descente contrôlée vers le bas de la poitrine (ligne des mamelons)",
+        "Touche la poitrine sans rebond",
+        "Pousse vers le haut et légèrement vers l'arrière",
+        "Garde les coudes à environ 45-75° du corps (ni trop ouverts, ni trop fermés)",
+      ],
+      tips:[
+        "💡 Contracte les omoplates ensemble avant de sortir la barre",
+        "⚠️ Les fessiers restent en contact avec le banc",
+        "📹 Filme de côté pour vérifier le chemin de barre",
+        "🎯 Le poignet doit être droit, pas fléchi en arrière",
+      ]
+    },
+    {
+      name:"Bench serré",emoji:"🤏",days:"Jour 2",color:"#06b6d4",
+      setup:"Même position que le bench. Prise serrée : pouces séparés d'environ 30-40cm (légèrement plus étroit que le bench normal).",
+      exec:[
+        "Descente identique mais la barre touche légèrement plus haut sur la poitrine",
+        "Les coudes restent plus près du corps qu'au bench normal",
+        "Pousse en gardant les coudes à ~45° du corps",
+      ],
+      tips:[
+        "💡 Excellent pour renforcer le triceps et la fin de mouvement du bench",
+        "⚠️ Ne serre pas trop la prise — ça peut stresser les poignets",
+        "🎯 Utilise 15-20% de moins que ton bench normal",
+      ]
+    },
+    {
+      name:"Deadlift",emoji:"⛓️",days:"Jour 2",color:"#f97316",
+      setup:"Barre sur le sol, pieds écartés à largeur de hanches, barre au-dessus des lacets. Prise en pronation (ou mixte si nécessaire) légèrement plus large que les pieds.",
+      exec:[
+        "Approche-toi de la barre, tibias contre la barre ou à 1-2cm",
+        "Hanches basses, dos droit, poitrine haute",
+        "Inspire et brace avant de tirer",
+        "Pousse le sol vers le bas (comme un leg press) — pense pas à 'tirer' mais à 'pousser'",
+        "Barre reste collée aux jambes tout le long du mouvement",
+        "En haut : hanches verrouillées, debout droit — pas d'hyperextension",
+        "Descente contrôlée ou poser la barre",
+      ],
+      tips:[
+        "⚠️ Le dos ne doit pas s'arrondir — si ça arrive le poids est trop lourd",
+        "💡 La barre doit frôler les tibias toute la montée",
+        "📹 Filme de côté pour voir si le dos reste neutre",
+        "🎯 RPE 6 = très facile, c'est voulu en phase de reprise",
+      ]
+    },
+    {
+      name:"Romanian Deadlift",emoji:"🔽",days:"Jour 3",color:"#f97316",
+      setup:"Debout, barre en main devant toi (comme après un deadlift). Pieds à largeur de hanches.",
+      exec:[
+        "Légère flexion des genoux (garder cette flexion tout le mouvement)",
+        "Penche le buste en avant en poussant les hanches vers l'arrière",
+        "Descend la barre le long des jambes en gardant le dos plat",
+        "Va jusqu'à sentir un étirement dans les ischio-jambiers (pas jusqu'au sol)",
+        "Remonte en poussant les hanches vers l'avant",
+      ],
+      tips:[
+        "💡 Ce n'est pas un deadlift — la barre ne touche pas le sol",
+        "⚠️ Si ton dos s'arrondit, tu vas trop bas",
+        "🎯 Excellent pour développer les ischio-jambiers et améliorer le deadlift",
+      ]
+    },
+    {
+      name:"Rowing barre",emoji:"🚣",days:"Jour 1",color:"#22c55e",
+      setup:"Penché à 45-60° vers l'avant, dos plat, barre en prise pronation.",
+      exec:[
+        "Tire la barre vers le bas de ta poitrine / nombril",
+        "Serre les omoplates en fin de mouvement",
+        "Descente contrôlée — ne laisse pas la barre tomber",
+        "Garde le buste stable, ne te redresse pas à chaque rep",
+      ],
+      tips:[
+        "💡 Renforce le dos et améliore la stabilité au bench et au squat",
+        "🎯 Pense à 'écraser' quelque chose entre tes omoplates",
+      ]
+    },
+    {
+      name:"Tirage vertical",emoji:"⬇️",days:"Jour 2",color:"#22c55e",
+      setup:"Assis à la machine, prise légèrement plus large que les épaules.",
+      exec:[
+        "Légère inclinaison du buste en arrière (10-15°)",
+        "Tire la barre vers le haut de la poitrine",
+        "Serre les coudes vers le bas et vers toi",
+        "Remontée contrôlée — ne laisse pas les bras s'étirer brusquement",
+      ],
+      tips:[
+        "💡 Travail le grand dorsal — améliore la stabilité au bench et au deadlift",
+        "⚠️ Ne tire pas derrière la nuque — risque de blessure épaule",
+      ]
+    },
+    {
+      name:"Face Pull",emoji:"🎯",days:"Jour 2",color:"#a855f7",
+      setup:"Poulie haute avec corde. Recule pour avoir de la tension. Prise neutre (paumes face à face).",
+      exec:[
+        "Tire la corde vers ton visage en séparant les deux extrémités",
+        "Les coudes montent à hauteur d'épaules ou légèrement au-dessus",
+        "Serre en fin de mouvement — imagine que tu essaies de montrer tes aisselles",
+        "Retour lent et contrôlé",
+      ],
+      tips:[
+        "💡 Renforce les rotateurs externes de l'épaule — protège les épaules sur le long terme",
+        "🎯 Poids léger, beaucoup de reps — 15 reps minimum",
+        "⚠️ Essentiel quand on benche 3x/semaine pour équilibrer les épaules",
+      ]
+    },
+    {
+      name:"Gainage",emoji:"🧱",days:"Jour 3",color:"#eab308",
+      setup:"Position planche sur les avant-bras et les orteils. Corps aligné de la tête aux talons.",
+      exec:[
+        "Contracte les abdos, fessiers et quadriceps en même temps",
+        "Respire normalement pendant la durée (ne bloque pas)",
+        "Garde la tête dans l'axe — ne regarde ni en haut ni en bas",
+        "45 à 60 secondes par série",
+      ],
+      tips:[
+        "💡 Le gainage renforce le bracing nécessaire au squat et au deadlift",
+        "⚠️ Si les hanches montent ou descendent, arrête et repose-toi",
+        "🎯 Qualité > durée — 45s bien faites valent mieux que 90s bâclées",
+      ]
+    },
+  ];
+
+  EXERCISES.forEach(ex=>{
+    const card=document.createElement("div");
+    Object.assign(card.style,{background:"#111827",border:`1px solid ${ex.color}25`,borderRadius:"12px",padding:"16px",marginBottom:"10px"});
+
+    // Header cliquable
+    const hdr=document.createElement("div");
+    Object.assign(hdr.style,{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",marginBottom:"0"});
+    hdr.innerHTML=`
+      <div style="display:flex;align-items:center;gap:9px">
+        <span style="font-size:20px">${ex.emoji}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${ex.color}">${ex.name}</div>
+          <div style="font-size:9px;color:#6b7280">${ex.days}</div>
+        </div>
+      </div>
+      <span style="color:${ex.color};font-size:12px">▼</span>`;
+
+    const body=document.createElement("div");
+    body.style.display="none";
+    body.style.marginTop="12px";
+
+    // Setup
+    body.innerHTML+=`<div style="background:#0d1117;border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="font-size:9px;color:#6b7280;letter-spacing:1px;margin-bottom:4px">📐 POSITION DE DÉPART</div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.6">${ex.setup}</div>
+    </div>`;
+
+    // Execution steps
+    let stepsHTML=`<div style="background:#0d1117;border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="font-size:9px;color:#6b7280;letter-spacing:1px;margin-bottom:8px">▶ EXÉCUTION</div>`;
+    ex.exec.forEach((step,i)=>{
+      stepsHTML+=`<div style="display:flex;gap:8px;padding:4px 0;border-top:${i>0?"1px solid #1f2937":"none"}">
+        <span style="color:${ex.color};font-weight:700;font-size:11px;flex-shrink:0">${i+1}.</span>
+        <span style="font-size:11px;color:#d1d5db;line-height:1.5">${step}</span>
+      </div>`;
+    });
+    stepsHTML+="</div>";
+    body.innerHTML+=stepsHTML;
+
+    // Tips
+    let tipsHTML=`<div style="background:#0d1117;border-radius:8px;padding:10px">
+      <div style="font-size:9px;color:#6b7280;letter-spacing:1px;margin-bottom:8px">💡 POINTS CLÉS</div>`;
+    ex.tips.forEach(tip=>{
+      tipsHTML+=`<div style="font-size:11px;color:#9ca3af;line-height:1.6;padding:2px 0">${tip}</div>`;
+    });
+    tipsHTML+="</div>";
+    body.innerHTML+=tipsHTML;
+
+    hdr.onclick=()=>{
+      const open=body.style.display==="block";
+      body.style.display=open?"none":"block";
+      hdr.querySelector("span:last-child").textContent=open?"▼":"▲";
+    };
+
+    card.appendChild(hdr);
+    card.appendChild(body);
+    guide.appendChild(card);
+  });
+
+  root.appendChild(guide);
 }
 
 // ── BLOCKS TAB ───────────────────────────────────────────────────────────────
