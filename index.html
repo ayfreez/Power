@@ -212,7 +212,7 @@ const BLOCKS = [
    desc:"Bloc de reprise sur mesure après 2 ans d'arrêt. Objectif : retrouver les sensations, réhabituer le corps aux charges, exploiter la mémoire musculaire. Toujours 3-4 reps en réserve, aucune série à l'échec. RPE 6 = très facile, c'est voulu.",
    notes:"🎯 Objectif : technique parfaite + retrouver les sensations\n📹 Filme tes séries de squat, bench et deadlift régulièrement\n🚶 8 000 à 10 000 pas par jour si possible\n🥗 Déficit calorique léger — cible 0.3 à 0.8kg/semaine",
    days:[
-     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:5,rpe:6},{l:"Bench Press",s:4,r:5,rpe:6},{l:"Rowing",s:3,r:8,rpe:6}]},
+     {name:"Jour 1",label:"Squat / Bench",exs:[{l:"Squat",s:4,r:5,rpe:6},{l:"Bench Press",s:4,r:5,rpe:6},{l:"Panata Super Rowing",s:3,r:8,rpe:6}]},
      {name:"Jour 2",label:"DL / Bench serré",exs:[{l:"Deadlift",s:3,r:5,rpe:6},{l:"Bench Serré",s:3,r:6,rpe:6},{l:"Tirage Vertical",s:3,r:8,rpe:6},{l:"Face Pull",s:3,r:15,rpe:6}]},
      {name:"Jour 3",label:"Squat pause / Bench",exs:[{l:"Squat Pause",s:3,r:4,rpe:6},{l:"Bench Press",s:5,r:4,rpe:6},{l:"Romanian DL",s:2,r:8,rpe:6},{l:"Gainage",s:3,r:1,rpe:6}]},
    ],
@@ -375,8 +375,28 @@ function startTimer(seconds){
       clearInterval(TIMER.interval);
       TIMER.running = false;
       TIMER.seconds = 0;
-      // Vibration + visual flash
-      if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
+      // Vibration
+      if(navigator.vibrate) navigator.vibrate([300,100,300,100,300]);
+      // Son via Web Audio API
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const playBeep = (freq, start, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = freq;
+          osc.type = "sine";
+          gain.gain.setValueAtTime(0, ctx.currentTime + start);
+          gain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + start + 0.01);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + duration + 0.05);
+        };
+        playBeep(880, 0,    0.18);
+        playBeep(880, 0.25, 0.18);
+        playBeep(1100,0.5,  0.35);
+      } catch(e){}
       flashTimerDone();
     }
     updateTimerDisplay();
@@ -735,17 +755,19 @@ function renderProfile(root){
       ]
     },
     {
-      name:"Rowing barre",emoji:"🚣",days:"Jour 1",color:"#22c55e",
-      setup:"Penché à 45-60° vers l'avant, dos plat, barre en prise pronation.",
+      name:"Panata Super Rowing",emoji:"🚣",days:"Jour 1",color:"#22c55e",
+      setup:"Machine Panata Super Rowing. Règle le siège pour que les poignées soient à hauteur de poitrine. Dos bien appuyé contre le dossier.",
       exec:[
-        "Tire la barre vers le bas de ta poitrine / nombril",
-        "Serre les omoplates en fin de mouvement",
-        "Descente contrôlée — ne laisse pas la barre tomber",
-        "Garde le buste stable, ne te redresse pas à chaque rep",
+        "Tire les poignées vers toi en gardant les coudes le long du corps",
+        "Serre les omoplates ensemble en fin de mouvement — tiens 1 seconde",
+        "Retour contrôlé — ne laisse pas les bras revenir en avant brusquement",
+        "Garde le dos bien appuyé contre le dossier tout le long",
       ],
       tips:[
-        "💡 Renforce le dos et améliore la stabilité au bench et au squat",
-        "🎯 Pense à 'écraser' quelque chose entre tes omoplates",
+        "💡 Machine isolante — excellent pour le dos sans fatiguer les lombaires",
+        "🎯 Pense à 'écraser quelque chose entre tes omoplates' en fin de mouvement",
+        "⚠️ Pas besoin d'aller très lourd — concentration sur la contraction",
+        "💪 Renforce le dos et améliore la stabilité au bench et au squat",
       ]
     },
     {
@@ -1965,6 +1987,114 @@ function renderSettings(root){
          <div style="font-size:11px;color:#166534;margin-top:2px">Données sauvegardées sur cet appareil. Reste dans Safari si tu ajoutes le fichier à l'écran d'accueil.</div>
        </div>
      </div>`));
+
+  // ── EXPORT / IMPORT ────────────────────────────────────────────────────────
+  const eiCard=div({background:"#111827",border:"1px solid #4f46e540",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
+  eiCard.appendChild(div({fontSize:"13px",fontWeight:"700",color:"#818cf8",marginBottom:"4px"},"💾 SAUVEGARDE & RESTAURATION"));
+  eiCard.appendChild(div({fontSize:"11px",color:"#6b7280",marginBottom:"14px"},
+    "Exporte tes données avant chaque mise à jour de l'app. Réimporte-les ensuite pour ne rien perdre."));
+
+  // Export button
+  const exportBtn=btn("📤 EXPORTER MES DONNÉES (JSON)",{
+    width:"100%",background:"#4f46e5",border:"none",color:"#fff",
+    padding:"12px",borderRadius:"8px",fontSize:"12px",fontWeight:"700",
+    letterSpacing:"1px",marginBottom:"8px",
+  },()=>{
+    const data={
+      version:1,
+      exportDate:new Date().toISOString(),
+      history:STATE.history,
+      e1rms:STATE.e1rms,
+      bodyweight:STATE.bodyweight,
+    };
+    const json=JSON.stringify(data,null,2);
+    const blob=new Blob([json],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`powerlog_backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  eiCard.appendChild(exportBtn);
+
+  // Import button
+  const importWrap=div({position:"relative"});
+  const importBtn=btn("📥 IMPORTER UNE SAUVEGARDE",{
+    width:"100%",background:"#1f2937",border:"1px solid #4f46e5",color:"#818cf8",
+    padding:"12px",borderRadius:"8px",fontSize:"12px",fontWeight:"700",
+    letterSpacing:"1px",marginBottom:"8px",
+  },()=>{ fileInput.click(); });
+  const fileInput=document.createElement("input");
+  fileInput.type="file";fileInput.accept=".json";
+  fileInput.style.display="none";
+  fileInput.onchange=e=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(!data.version||!data.history){
+          alert("Fichier invalide — ce n'est pas une sauvegarde PowerLog.");
+          return;
+        }
+        // Confirmation inline
+        const confirmDiv=document.getElementById("import-confirm");
+        confirmDiv.style.display="block";
+        confirmDiv._data=data;
+      }catch(err){
+        alert("Erreur de lecture du fichier.");
+      }
+    };
+    reader.readAsText(file);
+  };
+  importWrap.appendChild(importBtn);
+  importWrap.appendChild(fileInput);
+
+  // Confirm zone
+  const confirmImport=div({display:"none",padding:"12px",background:"rgba(79,70,229,.1)",border:"1px solid #4f46e5",borderRadius:"8px",marginBottom:"8px"});
+  confirmImport.id="import-confirm";
+  confirmImport.innerHTML=`<div style="font-size:12px;color:#818cf8;margin-bottom:10px;font-weight:600">⚠️ Importer écrasera tes données actuelles. Continuer ?</div>`;
+  const confirmRow=div({display:"flex",gap:"8px"});
+  const yesBtnI=btn("✅ Oui, importer",{background:"#4f46e5",color:"#fff",padding:"8px 16px",borderRadius:"7px",fontSize:"12px",fontWeight:"700"},()=>{
+    const data=confirmImport._data;
+    if(!data)return;
+    STATE.history=data.history||[];
+    STATE.e1rms=data.e1rms||{};
+    STATE.bodyweight=data.bodyweight||[];
+    save("pl_hist",STATE.history);
+    save("pl_e1rm",STATE.e1rms);
+    save("pl_bw",STATE.bodyweight);
+    confirmImport.style.display="none";
+    alert(`✅ Import réussi !\n${STATE.history.length} séances restaurées.`);
+    renderTab("settings",renderSettings);
+  });
+  const noBtnI=btn("Annuler",{background:"#374151",color:"#e2e8f0",padding:"8px 16px",borderRadius:"7px",fontSize:"12px"},()=>{
+    confirmImport.style.display="none";
+  });
+  confirmRow.appendChild(yesBtnI);
+  confirmRow.appendChild(noBtnI);
+  confirmImport.appendChild(confirmRow);
+
+  importWrap.appendChild(confirmImport);
+  eiCard.appendChild(importWrap);
+
+  // Stats résumé
+  const statsDiv=div({background:"#0d1117",borderRadius:"8px",padding:"10px",fontSize:"11px",color:"#6b7280"});
+  statsDiv.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+    <span>Séances enregistrées</span><span style="color:#e2e8f0;font-weight:600">${STATE.history.length}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+    <span>Pesées enregistrées</span><span style="color:#e2e8f0;font-weight:600">${STATE.bodyweight.length}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between">
+    <span>Dernière séance</span><span style="color:#e2e8f0;font-weight:600">${STATE.history.length?STATE.history[STATE.history.length-1].date:"—"}</span>
+  </div>`;
+  eiCard.appendChild(statsDiv);
+  root.appendChild(eiCard);
 
   // e1RM
   const eCard=div({background:"#111827",border:"1px solid #1f2937",borderRadius:"12px",padding:"16px",marginBottom:"12px"});
