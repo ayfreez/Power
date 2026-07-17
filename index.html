@@ -993,19 +993,51 @@ function renderSession(root){
     return;
   }
 
-  // Session header
-  const hdr=div({background:`${block.color}10`,border:`1px solid ${block.color}30`,borderRadius:"10px",padding:"10px 14px",marginBottom:"14px"});
-  const dots=block.wp.map((w2,i)=>{
-    const c=i===STATE.week?block.color:i<STATE.week?"#4f46e5":"#1f2937";
-    return `<div onclick="setWeek(${i})" style="width:8px;height:8px;border-radius:50%;background:${c};cursor:pointer;display:inline-block;margin:0 2px"></div>`;
-  }).join("");
-  hdr.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center">
-    <div>
-      <div style="font-size:14px;font-weight:700;color:${block.color}">${block.emoji} ${block.name}</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px">Sem. ${STATE.week+1}/${block.weeks} — ${block.wp[STATE.week]?.lbl} · ${fmt()}</div>
-    </div>
-    <div style="display:flex;align-items:center">${dots}</div>
+  // Session header — semaine lisible
+  const hdr=div({background:`${block.color}10`,border:`1px solid ${block.color}30`,borderRadius:"12px",padding:"12px 14px",marginBottom:"14px"});
+
+  // Titre bloc
+  const hdrTop=div({display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"});
+  hdrTop.innerHTML=`<div>
+    <div style="font-size:14px;font-weight:700;color:${block.color}">${block.emoji} ${block.name}</div>
+    <div style="font-size:10px;color:#6b7280;margin-top:1px">${fmt()}</div>
   </div>`;
+  hdr.appendChild(hdrTop);
+
+  // Sélecteur de semaine lisible
+  const weekScroll=div({display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"4px"});
+  block.wp.forEach((w2,i)=>{
+    const isActive=i===STATE.week;
+    const isPast=i<STATE.week;
+    const bg=isActive?`${block.color}25`:isPast?"#1a1a2e":"#1f2937";
+    const border=isActive?`1.5px solid ${block.color}`:isPast?"1px solid #374151":"1px solid #2d2d3a";
+    const color=isActive?block.color:isPast?"#475569":"#4b5563";
+    const wBtn=document.createElement("button");
+    Object.assign(wBtn.style,{
+      background:bg,border,color,borderRadius:"8px",
+      padding:"6px 10px",flexShrink:"0",cursor:"pointer",
+      fontFamily:"inherit",textAlign:"center",
+    });
+    wBtn.innerHTML=`<div style="font-size:8px;opacity:.6;margin-bottom:1px">S${i+1}</div>
+      <div style="font-size:11px;font-weight:${isActive?"700":"400"}">${w2.lbl}</div>
+      ${isActive?`<div style="font-size:8px;color:${block.color};margin-top:1px">← ici</div>`:""}`;
+    wBtn.onclick=()=>{STATE.week=i;STATE.dayIdx=0;STATE.log={};save("pl_st",{id:STATE.activeId,week:i,day:0});renderTab("session",renderSession);};
+    weekScroll.appendChild(wBtn);
+  });
+  hdr.appendChild(weekScroll);
+
+  // Info semaine active
+  const activeWP=block.wp[STATE.week];
+  const infoRow=div({display:"flex",gap:"6px",marginTop:"8px",flexWrap:"wrap"});
+  [
+    [`Semaine ${STATE.week+1}/${block.weeks}`,block.color],
+    [activeWP?.lbl,"#e2e8f0"],
+    [`RPE ${activeWP?.ro>0?"+":""}${activeWP?.ro!==0?activeWP?.ro:"base"}`,activeWP?.ro>0?"#ef4444":activeWP?.ro<0?"#22c55e":"#818cf8"],
+    [`Vol ×${activeWP?.vm}`,activeWP?.vm>1?"#22c55e":activeWP?.vm<1?"#f59e0b":"#6b7280"],
+  ].forEach(([text,c])=>{
+    infoRow.appendChild(div({background:`${c}15`,border:`1px solid ${c}30`,borderRadius:"5px",padding:"3px 8px",fontSize:"10px",fontWeight:"600",color:c},text));
+  });
+  hdr.appendChild(infoRow);
   root.appendChild(hdr);
 
   // Day selector
@@ -1229,7 +1261,11 @@ async function saveSession2(){
   if(!block||STATE.saving)return;
   STATE.saving=true;
   renderTab("session",renderSession);
-  const exs=getExs(block,STATE.week,STATE.dayIdx).map((ex,i)=>{
+
+  const currentDayIdx=STATE.dayIdx;
+  const currentWeek=STATE.week;
+
+  const exs=getExs(block,currentWeek,currentDayIdx).map((ex,i)=>{
     const lg=STATE.log[i]||{};
     const w=parseFloat(lg.weight)||getSugg(ex)||0;
     const rpe=parseFloat(lg.rpe)||ex.targetRpe;
@@ -1240,14 +1276,34 @@ async function saveSession2(){
   const nh=[...STATE.history,{
     date:new Date().toLocaleDateString("fr-FR"),
     blockId:STATE.activeId,blockName:block.name,blockInspo:block.inspo,
-    week:STATE.week+1,weekLabel:block.wp[STATE.week]?.lbl,
-    day:block.days[STATE.dayIdx]?.name,exercises:exs,
+    week:currentWeek+1,weekLabel:block.wp[currentWeek]?.lbl,
+    dayIdx:currentDayIdx,
+    day:block.days[currentDayIdx]?.name,
+    dayLabel:block.days[currentDayIdx]?.label,
+    exercises:exs,
   }];
-  STATE.e1rms=ne;STATE.history=nh;STATE.log={};
-  save("pl_hist",nh);save("pl_e1rm",ne);
-  STATE.saving=false;STATE.saved=true;
+  STATE.e1rms=ne;
+  STATE.history=nh;
+  STATE.log={};
+  save("pl_hist",nh);
+  save("pl_e1rm",ne);
+
+  // ── Auto-avancement ───────────────────────────────────────────────────────
+  const totalDays=block.days.length;
+  if(currentDayIdx+1 < totalDays){
+    STATE.dayIdx=currentDayIdx+1;
+  } else {
+    STATE.dayIdx=0;
+    if(currentWeek+1 < block.weeks){
+      STATE.week=currentWeek+1;
+    }
+  }
+  save("pl_st",{id:STATE.activeId,week:STATE.week,day:STATE.dayIdx});
+
+  STATE.saving=false;
+  STATE.saved=true;
   renderTab("session",renderSession);
-  setTimeout(()=>{STATE.saved=false;renderTab("session",renderSession);},2500);
+  setTimeout(()=>{STATE.saved=false;},2500);
 }
 
 // ── WEIGHT TAB ────────────────────────────────────────────────────────────────
@@ -1937,8 +1993,12 @@ function renderHistory(root){
     hdrLeft.innerHTML=`
       <span style="font-size:16px;flex-shrink:0">${bt?.emoji||"📋"}</span>
       <div style="min-width:0">
-        <div style="font-size:13px;font-weight:700;color:${bt?.color||"#818cf8"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.blockName} — S${s.week} ${s.weekLabel||""}</div>
-        <div style="font-size:10px;color:#6b7280">${s.day||""} · ${s.date}</div>
+        <div style="font-size:13px;font-weight:700;color:${bt?.color||"#818cf8"}">${s.blockName}</div>
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+          <span style="background:${bt?.color||"#818cf8"}18;border:1px solid ${bt?.color||"#818cf8"}30;color:${bt?.color||"#818cf8"};border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">Sem. ${s.week||"?"}${s.weekLabel?" — "+s.weekLabel:""}</span>
+          <span style="background:#1f293780;border:1px solid #374151;color:#d1d5db;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:600">${s.day||"Jour ?"}${s.dayLabel?" — "+s.dayLabel:""}</span>
+          <span style="color:#4b5563;font-size:9px;align-self:center">${s.date}</span>
+        </div>
       </div>`;
     const confirmZone=div({display:"none",alignItems:"center",gap:"6px",marginTop:"8px",padding:"8px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:"8px"});
     confirmZone.innerHTML=`<span style="font-size:11px;color:#ef4444;flex:1">Supprimer cette séance ?</span>`;
