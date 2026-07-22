@@ -363,34 +363,63 @@ function plateCalcHTML(weight){
 
 // ── REST TIMER ────────────────────────────────────────────────────────────────
 let TIMER = { running:false, seconds:0, interval:null, duration:120, endTime:null };
-let AUDIO_CTX = null;
+let TIMER_AUDIO = null; // Audio object prêt à jouer, créé au tap
 
-// Pré-initialise le contexte audio dès le premier tap utilisateur
-document.addEventListener("touchstart", ()=>{
-  if(!AUDIO_CTX){
-    try{ AUDIO_CTX = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+// Génère un son WAV de bips en JS pur et retourne un objet Audio
+function makeBeepAudio(){
+  const sampleRate = 44100;
+  const bips = [
+    {freq:880,  start:0,    dur:0.2},
+    {freq:880,  start:0.28, dur:0.2},
+    {freq:1100, start:0.56, dur:0.5},
+  ];
+  const totalSamples = Math.ceil(sampleRate * 1.2);
+  const buf = new Float32Array(totalSamples);
+  bips.forEach(({freq, start, dur})=>{
+    const s0 = Math.floor(start * sampleRate);
+    const s1 = Math.floor((start + dur) * sampleRate);
+    for(let i = s0; i < s1 && i < totalSamples; i++){
+      const t = (i - s0) / sampleRate;
+      const env = Math.min(t / 0.01, 1) * Math.max(1 - (t - dur + 0.05) / 0.05, 0);
+      buf[i] += Math.sin(2 * Math.PI * freq * t) * 0.7 * env;
+    }
+  });
+  // Encode en WAV 16-bit
+  const len = buf.length;
+  const ab = new ArrayBuffer(44 + len * 2);
+  const view = new DataView(ab);
+  const writeStr = (o, s) => { for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); };
+  writeStr(0,'RIFF'); view.setUint32(4, 36+len*2, true);
+  writeStr(8,'WAVE'); writeStr(12,'fmt ');
+  view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true);
+  view.setUint16(32,2,true); view.setUint16(34,16,true);
+  writeStr(36,'data'); view.setUint32(40,len*2,true);
+  for(let i=0;i<len;i++){
+    const s = Math.max(-1,Math.min(1,buf[i]));
+    view.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true);
   }
-}, {once:true});
+  const blob = new Blob([ab], {type:'audio/wav'});
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.load();
+  return audio;
+}
+
+function unlockAudio(){
+  // Crée et charge le son au moment du tap (obligatoire iOS)
+  try{ TIMER_AUDIO = makeBeepAudio(); }catch(e){}
+}
 
 function playTimerSound(){
   try{
-    if(!AUDIO_CTX) AUDIO_CTX = new (window.AudioContext || window.webkitAudioContext)();
-    if(AUDIO_CTX.state === "suspended") AUDIO_CTX.resume();
-    const beep = (freq, start, dur) => {
-      const osc = AUDIO_CTX.createOscillator();
-      const gain = AUDIO_CTX.createGain();
-      osc.connect(gain); gain.connect(AUDIO_CTX.destination);
-      osc.frequency.value = freq; osc.type = "sine";
-      gain.gain.setValueAtTime(0, AUDIO_CTX.currentTime + start);
-      gain.gain.linearRampToValueAtTime(0.7, AUDIO_CTX.currentTime + start + 0.01);
-      gain.gain.linearRampToValueAtTime(0, AUDIO_CTX.currentTime + start + dur);
-      osc.start(AUDIO_CTX.currentTime + start);
-      osc.stop(AUDIO_CTX.currentTime + start + dur + 0.05);
-    };
-    beep(880,  0,    0.18);
-    beep(880,  0.25, 0.18);
-    beep(1100, 0.5,  0.4);
+    if(TIMER_AUDIO){
+      TIMER_AUDIO.currentTime = 0;
+      TIMER_AUDIO.play().catch(()=>{});
+    }
   }catch(e){}
+  // Fallback vibration
+  if(navigator.vibrate) navigator.vibrate([300,100,300,100,300]);
 }
 
 function timerDone(){
@@ -404,6 +433,8 @@ function timerDone(){
 }
 
 function startTimer(seconds){
+  // Débloque le contexte audio au moment du tap utilisateur
+  unlockAudio();
   clearInterval(TIMER.interval);
   TIMER.duration = seconds;
   TIMER.seconds = seconds;
@@ -425,13 +456,13 @@ function tickTimer(){
 
 function pauseTimer(){
   clearInterval(TIMER.interval);
-  TIMER.running = false;
-  TIMER.endTime = null;
+  TIMER.running = false; TIMER.endTime = null;
   localStorage.removeItem("pl_timer");
   updateTimerDisplay();
 }
 
 function resumeTimer(){
+  unlockAudio();
   TIMER.running = true;
   TIMER.endTime = Date.now() + TIMER.seconds * 1000;
   localStorage.setItem("pl_timer", JSON.stringify({endTime:TIMER.endTime, duration:TIMER.duration}));
@@ -455,7 +486,6 @@ function addTimerSeconds(delta){
   updateTimerDisplay();
 }
 
-// Restaure le timer si l'app était en background
 function restoreTimer(){
   try{
     const t = localStorage.getItem("pl_timer");
@@ -463,10 +493,9 @@ function restoreTimer(){
     const {endTime, duration} = JSON.parse(t);
     const remaining = Math.round((endTime - Date.now()) / 1000);
     if(remaining <= 0){
-      // Temps écoulé pendant le background
       localStorage.removeItem("pl_timer");
       playTimerSound();
-      if(navigator.vibrate) navigator.vibrate([300,100,300,100,300]);
+      if(navigator.vibrate) navigator.vibrate([300,100,300]);
     } else {
       TIMER.duration = duration;
       TIMER.seconds = remaining;
@@ -479,7 +508,6 @@ function restoreTimer(){
   }catch(e){}
 }
 
-// Relance le timer quand l'app revient au premier plan
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState === "visible"){
     clearInterval(TIMER.interval);
@@ -507,9 +535,10 @@ function updateTimerDisplay(){
 function flashTimerDone(){
   const widget = document.getElementById("timer-widget");
   if(!widget) return;
-  let n=0; const flash=setInterval(()=>{
+  let n=0;
+  const flash = setInterval(()=>{
     widget.style.background = n%2===0?"#16a34a":"#111827";
-    if(++n>5) clearInterval(flash);
+    if(++n>5){ clearInterval(flash); widget.style.background="#111827"; }
   },300);
 }
 
