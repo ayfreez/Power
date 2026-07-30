@@ -316,11 +316,93 @@ function getLastData(lift){
       if(ex.lift===lift&&ex.weight&&ex.actualRpe)return ex;
   return null;
 }
+
+// ── RELATIONS ENTRE EXERCICES ─────────────────────────────────────────────────
+// Chaque accessoire est lié à un mouvement parent avec un ratio
+// ratio = % du e1RM du mouvement parent à utiliser comme base
+const EXERCISE_RELATIONS = {
+  // ── VARIANTES SQUAT ──────────────────────────────────────────────────────
+  "Squat Pause":        { parent:"Squat",        ratio:0.82, note:"−18% vs Squat (pause supprime le rebond)" },
+  "Squat Tempo":        { parent:"Squat",        ratio:0.78, note:"−22% vs Squat (tempo ralentit le mouvement)" },
+  "Box Squat":          { parent:"Squat",        ratio:0.80, note:"−20% vs Squat" },
+  "Squat Avant":        { parent:"Squat",        ratio:0.75, note:"−25% vs Squat low bar" },
+  "Safety Bar Squat":   { parent:"Squat",        ratio:0.85, note:"−15% vs Squat" },
+
+  // ── VARIANTES BENCH ──────────────────────────────────────────────────────
+  "Bench Serré":        { parent:"Bench Press",  ratio:0.82, note:"−18% vs Bench (moins de pectoral, plus de triceps)" },
+  "Bench Pause":        { parent:"Bench Press",  ratio:0.88, note:"−12% vs Bench (pause supprime le rebond)" },
+  "Bench Tempo":        { parent:"Bench Press",  ratio:0.78, note:"−22% vs Bench" },
+  "Board Press":        { parent:"Bench Press",  ratio:0.92, note:"−8% vs Bench (amplitude réduite)" },
+  "Floor Press":        { parent:"Bench Press",  ratio:0.85, note:"−15% vs Bench (pas de jambes)" },
+  "Incliné":            { parent:"Bench Press",  ratio:0.80, note:"−20% vs Bench" },
+  "Décliné":            { parent:"Bench Press",  ratio:0.90, note:"−10% vs Bench" },
+
+  // ── VARIANTES DEADLIFT ───────────────────────────────────────────────────
+  "Romanian DL":        { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL (exercice d'isolation ischio)" },
+  "Romanian Deadlift":  { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL (exercice d'isolation ischio)" },
+  "Deadlift Roumain":   { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL" },
+  "Deadlift Pause":     { parent:"Deadlift",     ratio:0.85, note:"−15% vs DL (pause au niveau des genoux)" },
+  "Deficit Deadlift":   { parent:"Deadlift",     ratio:0.82, note:"−18% vs DL (amplitude augmentée)" },
+  "Rack Pull":          { parent:"Deadlift",     ratio:1.05, note:"+5% vs DL (amplitude réduite, plus lourd)" },
+  "Sumo Deadlift":      { parent:"Deadlift",     ratio:0.95, note:"±5% selon morphologie" },
+  "Stiff Leg DL":       { parent:"Deadlift",     ratio:0.65, note:"−35% vs DL (jambes tendues)" },
+
+  // ── EXERCICES DE DOS ────────────────────────────────────────────────────
+  "Bench Serré":        { parent:"Bench Press",  ratio:0.82, note:"−18% vs Bench" },
+  "Tirage Vertical":    { parent:"Deadlift",     ratio:0.40, note:"Environ 40% du DL — machine isolante" },
+  "Panata Super Rowing":{ parent:"Deadlift",     ratio:0.45, note:"Environ 45% du DL — machine isolante" },
+  "Rowing Barre":       { parent:"Deadlift",     ratio:0.50, note:"Environ 50% du DL" },
+  "Face Pull":          { parent:"Bench Press",  ratio:0.15, note:"Exercice léger — 15% du Bench max" },
+};
+
+function getParentE1rm(lift){
+  const rel = EXERCISE_RELATIONS[lift];
+  if(!rel) return null;
+  // Cherche le e1RM du mouvement parent
+  const parentE1rm = STATE.e1rms[rel.parent] || null;
+  const lastParent = getLastData(rel.parent);
+  const parentFromHistory = lastParent
+    ? calcE1RM(lastParent.weight, lastParent.reps||5, lastParent.actualRpe)
+    : null;
+  const bestParent = Math.max(parentE1rm||0, parentFromHistory||0);
+  if(!bestParent) return null;
+  return { e1rm: bestParent, ratio: rel.ratio, parent: rel.parent, note: rel.note };
+}
+
 function getSugg(ex){
-  const last=getLastData(ex.lift);
-  if(last)return calcSuggest(calcE1RM(last.weight,last.reps||ex.reps,last.actualRpe),ex.reps,ex.targetRpe);
-  if(STATE.e1rms[ex.lift])return calcSuggest(STATE.e1rms[ex.lift],ex.reps,ex.targetRpe);
+  // 1. Cherche dans l'historique de CET exercice précis (priorité)
+  const last = getLastData(ex.lift);
+  if(last){
+    return calcSuggest(calcE1RM(last.weight, last.reps||ex.reps, last.actualRpe), ex.reps, ex.targetRpe);
+  }
+
+  // 2. Cherche le e1RM direct de cet exercice
+  if(STATE.e1rms[ex.lift]){
+    return calcSuggest(STATE.e1rms[ex.lift], ex.reps, ex.targetRpe);
+  }
+
+  // 3. Calcule depuis le mouvement parent si c'est un accessoire
+  const parentData = getParentE1rm(ex.lift);
+  if(parentData){
+    const derivedE1rm = Math.round(parentData.e1rm * parentData.ratio);
+    return calcSuggest(derivedE1rm, ex.reps, ex.targetRpe);
+  }
+
   return null;
+}
+
+function getSuggInfo(ex){
+  // Retourne des infos sur d'où vient la suggestion (pour affichage)
+  const last = getLastData(ex.lift);
+  if(last) return { source:"historique", label:null };
+  if(STATE.e1rms[ex.lift]) return { source:"e1rm", label:null };
+  const parentData = getParentE1rm(ex.lift);
+  if(parentData) return {
+    source:"parent",
+    label:`Calculé depuis ${parentData.parent} × ${Math.round(parentData.ratio*100)}%`,
+    note: parentData.note,
+  };
+  return { source:"none", label:null };
 }
 function fmt(date){return new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});}
 
@@ -1242,10 +1324,12 @@ function renderSession(root){
 
     // Suggestion
     if(sugg){
+      const suggInfo=getSuggInfo(ex);
       const diffTxt=diff!==null?`<span style="margin-left:6px;font-size:11px;color:${parseFloat(diff)>0?"#22c55e":parseFloat(diff)<0?"#ef4444":"#6b7280"}">(${parseFloat(diff)>0?"+":""}${diff} kg)</span>`:"";
       const lastTxt=last?`<div style="margin-left:auto;font-size:10px;color:#6b7280;text-align:right;line-height:1.6">Dernière: ${last.weight}kg<br>RPE ${last.actualRpe} · e1RM ${last.e1rm}kg</div>`:"";
+      const parentTxt=suggInfo.source==="parent"?`<div style="width:100%;margin-top:6px;padding:5px 8px;background:#052e16;border-radius:5px;font-size:10px;color:#22c55e">📐 ${suggInfo.label} · <span style="color:#6b7280">${suggInfo.note}</span></div>`:"";
       card.appendChild(div({background:"#1e1b4b",border:"1px dashed #4f46e5",borderRadius:"8px",padding:"8px 12px",marginBottom:"12px",display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"},
-        `<span>🎯</span><div style="font-size:13px"><span style="color:#818cf8">Suggéré : </span><span style="color:#e2e8f0;font-size:17px;font-weight:700">${sugg} kg</span>${diffTxt}</div>${lastTxt}`));
+        `<span>🎯</span><div style="font-size:13px"><span style="color:#818cf8">Suggéré : </span><span style="color:#e2e8f0;font-size:17px;font-weight:700">${sugg} kg</span>${diffTxt}</div>${lastTxt}${parentTxt}`));
     }
 
     // Inputs row
@@ -2141,9 +2225,18 @@ function renderSettings(root){
     padding:"12px",borderRadius:"8px",fontSize:"12px",fontWeight:"700",
     letterSpacing:"1px",marginBottom:"8px",
   },()=>{
+    const block=getBlock();
     const data={
-      version:1,
+      version:2,
       exportDate:new Date().toISOString(),
+      exportInfo:{
+        blockId:STATE.activeId,
+        blockName:block?.name||null,
+        week:STATE.week,
+        weekLabel:block?.wp[STATE.week]?.lbl||null,
+        dayIdx:STATE.dayIdx,
+        dayName:block?.days[STATE.dayIdx]?.name||null,
+      },
       history:STATE.history,
       e1rms:STATE.e1rms,
       bodyweight:STATE.bodyweight,
@@ -2209,8 +2302,19 @@ function renderSettings(root){
     save("pl_hist",STATE.history);
     save("pl_e1rm",STATE.e1rms);
     save("pl_bw",STATE.bodyweight);
+    // Restaure la position dans le programme si disponible
+    if(data.exportInfo){
+      const info=data.exportInfo;
+      STATE.activeId=info.blockId||null;
+      STATE.week=info.week||0;
+      STATE.dayIdx=info.dayIdx||0;
+      save("pl_st",{id:STATE.activeId,week:STATE.week,day:STATE.dayIdx});
+    }
     confirmImport.style.display="none";
-    alert(`✅ Import réussi !\n${STATE.history.length} séances restaurées.`);
+    const info=data.exportInfo;
+    const msg=`✅ Import réussi !\n${STATE.history.length} séances restaurées.`
+      +(info?.blockName?`\n\nPosition restaurée :\n📦 ${info.blockName}\n📅 Semaine ${(info.week||0)+1}${info.weekLabel?" — "+info.weekLabel:""}\n🏋️ ${info.dayName||"Jour 1"}`:"");
+    alert(msg);
     renderTab("settings",renderSettings);
   });
   const noBtnI=btn("Annuler",{background:"#374151",color:"#e2e8f0",padding:"8px 16px",borderRadius:"7px",fontSize:"12px"},()=>{
