@@ -292,7 +292,15 @@ let STATE = {
 function load(){
   try{const h=localStorage.getItem("pl_hist");if(h)STATE.history=JSON.parse(h);}catch(e){}
   try{const e=localStorage.getItem("pl_e1rm");if(e)STATE.e1rms=JSON.parse(e);}catch(e){}
-  try{const s=localStorage.getItem("pl_st");if(s){const p=JSON.parse(s);STATE.activeId=p.id||null;STATE.week=p.week||0;STATE.dayIdx=p.day||0;}}catch(e){}
+  try{
+    const s=localStorage.getItem("pl_st");
+    if(s){
+      const p=JSON.parse(s);
+      STATE.activeId  = p.id   || null;
+      STATE.week      = typeof p.week==="number" ? p.week : 0;
+      STATE.dayIdx    = typeof p.day ==="number" ? p.day  : 0;
+    }
+  }catch(e){}
   try{const w=localStorage.getItem("pl_bw");if(w)STATE.bodyweight=JSON.parse(w);}catch(e){}
   try{const l=localStorage.getItem("pl_log");if(l)STATE.log=JSON.parse(l);}catch(e){}
 }
@@ -322,43 +330,49 @@ function getLastData(lift){
 // ratio = % du e1RM du mouvement parent à utiliser comme base
 const EXERCISE_RELATIONS = {
   // ── VARIANTES SQUAT ──────────────────────────────────────────────────────
-  "Squat Pause":        { parent:"Squat",        ratio:0.82, note:"−18% vs Squat (pause supprime le rebond)" },
-  "Squat Tempo":        { parent:"Squat",        ratio:0.78, note:"−22% vs Squat (tempo ralentit le mouvement)" },
-  "Box Squat":          { parent:"Squat",        ratio:0.80, note:"−20% vs Squat" },
-  "Squat Avant":        { parent:"Squat",        ratio:0.75, note:"−25% vs Squat low bar" },
-  "Safety Bar Squat":   { parent:"Squat",        ratio:0.85, note:"−15% vs Squat" },
+  "Squat Pause":         { parent:"Squat",       ratio:0.82, note:"−18% vs Squat (pause supprime le rebond)" },
+  "Squat Tempo":         { parent:"Squat",       ratio:0.78, note:"−22% vs Squat" },
+  "Box Squat":           { parent:"Squat",       ratio:0.80, note:"−20% vs Squat" },
+  "Squat Avant":         { parent:"Squat",       ratio:0.75, note:"−25% vs Squat low bar" },
+  "Safety Bar Squat":    { parent:"Squat",       ratio:0.85, note:"−15% vs Squat" },
 
   // ── VARIANTES BENCH ──────────────────────────────────────────────────────
-  "Bench Serré":        { parent:"Bench Press",  ratio:0.82, note:"−18% vs Bench (moins de pectoral, plus de triceps)" },
-  "Bench Pause":        { parent:"Bench Press",  ratio:0.88, note:"−12% vs Bench (pause supprime le rebond)" },
-  "Bench Tempo":        { parent:"Bench Press",  ratio:0.78, note:"−22% vs Bench" },
-  "Board Press":        { parent:"Bench Press",  ratio:0.92, note:"−8% vs Bench (amplitude réduite)" },
-  "Floor Press":        { parent:"Bench Press",  ratio:0.85, note:"−15% vs Bench (pas de jambes)" },
-  "Incliné":            { parent:"Bench Press",  ratio:0.80, note:"−20% vs Bench" },
-  "Décliné":            { parent:"Bench Press",  ratio:0.90, note:"−10% vs Bench" },
+  "Bench Serré":         { parent:"Bench Press", ratio:0.82, note:"−18% vs Bench (plus de triceps)" },
+  "Bench Pause":         { parent:"Bench Press", ratio:0.88, note:"−12% vs Bench (pause supprime le rebond)" },
+  "Bench Tempo":         { parent:"Bench Press", ratio:0.78, note:"−22% vs Bench" },
+  "Board Press":         { parent:"Bench Press", ratio:0.92, note:"−8% vs Bench (amplitude réduite)" },
+  "Floor Press":         { parent:"Bench Press", ratio:0.85, note:"−15% vs Bench (sans les jambes)" },
+  "Incliné":             { parent:"Bench Press", ratio:0.80, note:"−20% vs Bench" },
+  "Décliné":             { parent:"Bench Press", ratio:0.90, note:"−10% vs Bench" },
 
   // ── VARIANTES DEADLIFT ───────────────────────────────────────────────────
-  "Romanian DL":        { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL (exercice d'isolation ischio)" },
-  "Romanian Deadlift":  { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL (exercice d'isolation ischio)" },
-  "Deadlift Roumain":   { parent:"Deadlift",     ratio:0.60, note:"−40% vs DL" },
-  "Deadlift Pause":     { parent:"Deadlift",     ratio:0.85, note:"−15% vs DL (pause au niveau des genoux)" },
-  "Deficit Deadlift":   { parent:"Deadlift",     ratio:0.82, note:"−18% vs DL (amplitude augmentée)" },
-  "Rack Pull":          { parent:"Deadlift",     ratio:1.05, note:"+5% vs DL (amplitude réduite, plus lourd)" },
-  "Sumo Deadlift":      { parent:"Deadlift",     ratio:0.95, note:"±5% selon morphologie" },
-  "Stiff Leg DL":       { parent:"Deadlift",     ratio:0.65, note:"−35% vs DL (jambes tendues)" },
+  "Romanian DL":         { parent:"Deadlift",    ratio:0.60, note:"−40% vs DL (isolation ischio-jambiers)" },
+  "Romanian Deadlift":   { parent:"Deadlift",    ratio:0.60, note:"−40% vs DL (isolation ischio-jambiers)" },
+  "Deadlift Roumain":    { parent:"Deadlift",    ratio:0.60, note:"−40% vs DL" },
+  "Deadlift Pause":      { parent:"Deadlift",    ratio:0.85, note:"−15% vs DL (pause genou)" },
+  "Deficit Deadlift":    { parent:"Deadlift",    ratio:0.82, note:"−18% vs DL (amplitude augmentée)" },
+  "Rack Pull":           { parent:"Deadlift",    ratio:1.05, note:"+5% vs DL (amplitude réduite)" },
+  "Sumo Deadlift":       { parent:"Deadlift",    ratio:0.95, note:"±5% selon morphologie" },
+  "Stiff Leg DL":        { parent:"Deadlift",    ratio:0.65, note:"−35% vs DL (jambes tendues)" },
 
-  // ── EXERCICES DE DOS ────────────────────────────────────────────────────
-  "Bench Serré":        { parent:"Bench Press",  ratio:0.82, note:"−18% vs Bench" },
-  "Tirage Vertical":    { parent:"Deadlift",     ratio:0.40, note:"Environ 40% du DL — machine isolante" },
-  "Panata Super Rowing":{ parent:"Deadlift",     ratio:0.45, note:"Environ 45% du DL — machine isolante" },
-  "Rowing Barre":       { parent:"Deadlift",     ratio:0.50, note:"Environ 50% du DL" },
-  "Face Pull":          { parent:"Bench Press",  ratio:0.15, note:"Exercice léger — 15% du Bench max" },
+  // ── DOS / TIRAGE ─────────────────────────────────────────────────────────
+  "Tirage Vertical":     { parent:"Deadlift",    ratio:0.40, note:"~40% du DL — machine isolante grand dorsal" },
+  "Panata Super Rowing": { parent:"Deadlift",    ratio:0.45, note:"~45% du DL — machine isolante dos" },
+  "Rowing":              { parent:"Deadlift",    ratio:0.50, note:"~50% du DL — rowing barre" },
+  "Rowing Barre":        { parent:"Deadlift",    ratio:0.50, note:"~50% du DL" },
+  "Face Pull":           { parent:"Bench Press", ratio:0.15, note:"~15% du Bench — exercice léger, 15 reps min" },
+
+  // ── GAINAGE / ABDOS ──────────────────────────────────────────────────────
+  // Pas de poids — on retourne null intentionnellement
+  "Gainage":             { parent:null,          ratio:null, note:"Exercice au poids du corps — durée en secondes" },
+  "Planche":             { parent:null,          ratio:null, note:"Exercice au poids du corps" },
+  "Crunch":              { parent:null,          ratio:null, note:"Exercice au poids du corps" },
 };
 
 function getParentE1rm(lift){
   const rel = EXERCISE_RELATIONS[lift];
   if(!rel) return null;
-  // Cherche le e1RM du mouvement parent
+  if(!rel.parent || !rel.ratio) return null; // exercice au poids du corps
   const parentE1rm = STATE.e1rms[rel.parent] || null;
   const lastParent = getLastData(rel.parent);
   const parentFromHistory = lastParent
