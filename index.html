@@ -9,9 +9,14 @@
   <meta name="theme-color" content="#020817"/>
   <title>PowerLog</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{
-      width:100%;height:100%;
+    html{
+      height: -webkit-fill-available;
+      background:#020817;
+    }
+    body{
+      width:100%;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
       overflow:hidden;
       background:#020817;
       font-family:-apple-system,system-ui,sans-serif;
@@ -20,7 +25,14 @@
       -webkit-tap-highlight-color:transparent;
       touch-action:manipulation;
     }
-    #app{position:fixed;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;overflow:hidden}
+    #app{
+      position:fixed;
+      top:0;right:0;bottom:0;left:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      background:#020817;
+    }
     #safe-top{flex-shrink:0;height:env(safe-area-inset-top);min-height:env(safe-area-inset-top);background:#020817}
     #safe-bottom{display:none}
 
@@ -58,16 +70,17 @@
       background:#020817;
       border-top:1px solid #0f172a;
       display:flex;
-      padding-bottom:34px;
+      padding-top:6px;
+      padding-bottom:28px;
     }
     .nav-btn{
       flex:1;background:transparent;border:none;
-      padding:8px 0 6px;
+      padding:4px 0;
       display:flex;flex-direction:column;align-items:center;gap:2px;
       cursor:pointer;
     }
-    .nav-btn span:first-child{font-size:18px}
-    .nav-btn span:last-child{font-size:9px;letter-spacing:.5px;font-weight:500;text-transform:uppercase}
+    .nav-btn span:first-child{font-size:18px;line-height:1}
+    .nav-btn span:last-child{font-size:9px;letter-spacing:.5px;font-weight:500;text-transform:uppercase;line-height:1}
 
     /* ── CARDS ── */
     .card{
