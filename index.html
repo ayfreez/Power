@@ -9,14 +9,11 @@
   <meta name="theme-color" content="#020817"/>
   <title>PowerLog</title>
   <style>
-    html{
-      height: -webkit-fill-available;
-      background:#020817;
-    }
-    body{
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{
       width:100%;
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
+      height:100%;
+      height:100dvh;
       overflow:hidden;
       background:#020817;
       font-family:-apple-system,system-ui,sans-serif;
@@ -28,6 +25,8 @@
     #app{
       position:fixed;
       top:0;right:0;bottom:0;left:0;
+      height:100%;
+      height:100dvh;
       display:flex;
       flex-direction:column;
       overflow:hidden;
@@ -437,6 +436,16 @@ const BLOCKS = [
      {name:"Jour 3",label:"Jour lourd",exs:[{l:"Deadlift",s:3,r:2,rpe:8.5},{l:"Squat",s:2,r:2,rpe:9},{l:"Bench Press",s:3,r:2,rpe:8.5}]},
    ],
    wp:[{lbl:"Intro lourd",ro:0,vm:0.9},{lbl:"Lourd",ro:0.5,vm:1},{lbl:"Très lourd",ro:1,vm:0.9},{lbl:"Pic",ro:1.5,vm:0.8},{lbl:"Deload",ro:-2,vm:0.5}]},
+
+  {id:"perso_ppl",emoji:"🏗️",name:"REPRISE PPL — POIGNET",inspo:"Push / Pull / Legs · muscu classique",color:"#10b981",weeks:6,level:"Mon Programme",
+   desc:"Bloc muscu classique (Push / Pull / Legs) en attendant que le poignet se remette. Prises neutres, machines, câbles et sangles pour ménager le poignet. Double progression : tu montes la charge quand tu atteins le haut de la fourchette de reps sur toutes les séries.",
+   notes:"🩹 Douleur au poignet = tu remplaces l'exo par la machine équivalente, jamais de force\n🎯 Reps affichées = milieu de fourchette (ex. 9 = 8-10) — monte la charge si tu dépasses sur toutes les séries\n🧤 Sangles pour les tirages et le RDL\n📈 Poids suggérés = estimations au départ, ajuste dès la 1re séance\n🔁 6 séances/semaine possible : fais tourner PPL deux fois",
+   days:[
+     {name:"Jour 1",label:"Push",exs:[{l:"Développé Incliné Haltères",s:3,r:9,rpe:7},{l:"Chest Press Machine",s:3,r:11,rpe:7},{l:"Développé Épaules Machine",s:3,r:10,rpe:7},{l:"Élévations Latérales Poulie",s:3,r:13,rpe:7},{l:"Pushdown Corde",s:3,r:13,rpe:7},{l:"Extension Triceps Corde",s:2,r:13,rpe:7}]},
+     {name:"Jour 2",label:"Pull",exs:[{l:"Tirage Vertical",s:3,r:10,rpe:7},{l:"Rowing Buste Appuyé",s:3,r:10,rpe:7},{l:"Rowing Poulie Basse",s:3,r:11,rpe:7},{l:"Face Pull",s:3,r:15,rpe:7},{l:"Curl Marteau Corde",s:3,r:11,rpe:7},{l:"Oiseau Machine",s:2,r:15,rpe:7}]},
+     {name:"Jour 3",label:"Legs",exs:[{l:"Presse à Cuisses",s:3,r:11,rpe:7},{l:"Hack Squat",s:3,r:9,rpe:7},{l:"Romanian DL",s:3,r:9,rpe:7},{l:"Leg Curl",s:3,r:11,rpe:7},{l:"Leg Extension",s:2,r:13,rpe:7},{l:"Mollets Debout",s:4,r:13,rpe:7}]},
+   ],
+   wp:[{lbl:"S1 Intro",ro:0,vm:0.9},{lbl:"S2",ro:0,vm:1},{lbl:"S3",ro:1,vm:1},{lbl:"S4",ro:1,vm:1},{lbl:"S5 Pic",ro:2,vm:1},{lbl:"Deload",ro:-1.5,vm:0.6}]},
 ];
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -521,6 +530,23 @@ const EXERCISE_RELATIONS = {
   "Rowing":              { parent:"Deadlift",    ratio:0.50, note:"~50% du DL — rowing barre" },
   "Rowing Barre":        { parent:"Deadlift",    ratio:0.50, note:"~50% du DL" },
   "Face Pull":           { parent:"Bench Press", ratio:0.15, note:"~15% du Bench — exercice léger, 15 reps min" },
+
+  // ── BLOC PPL (muscu, poignet) ────────────────────────────────────────────
+  "Développé Incliné Haltères": { parent:"Bench Press", ratio:0.45, note:"~45% du Bench — poids PAR MAIN, estimation" },
+  "Chest Press Machine":        { parent:"Bench Press", ratio:0.80, note:"~80% du Bench — varie beaucoup selon la machine" },
+  "Développé Épaules Machine":  { parent:"Bench Press", ratio:0.55, note:"~55% du Bench — estimation" },
+  "Élévations Latérales Poulie":{ parent:"Bench Press", ratio:0.12, note:"~12% du Bench — un bras, estimation" },
+  "Pushdown Corde":             { parent:"Bench Press", ratio:0.40, note:"~40% du Bench — estimation" },
+  "Extension Triceps Corde":    { parent:"Bench Press", ratio:0.30, note:"~30% du Bench — estimation" },
+  "Rowing Buste Appuyé":        { parent:"Deadlift",    ratio:0.50, note:"~50% du DL — machine, estimation" },
+  "Rowing Poulie Basse":        { parent:"Deadlift",    ratio:0.48, note:"~48% du DL — estimation" },
+  "Curl Marteau Corde":         { parent:"Deadlift",    ratio:0.20, note:"~20% du DL — estimation" },
+  "Oiseau Machine":             { parent:"Bench Press", ratio:0.25, note:"~25% du Bench — estimation" },
+  "Presse à Cuisses":           { parent:"Squat",       ratio:2.00, note:"~200% du Squat — dépend de la machine et des plaques" },
+  "Hack Squat":                 { parent:"Squat",       ratio:0.95, note:"~95% du Squat — estimation" },
+  "Leg Curl":                   { parent:"Deadlift",    ratio:0.40, note:"~40% du DL — estimation" },
+  "Leg Extension":              { parent:"Squat",       ratio:0.60, note:"~60% du Squat — estimation" },
+  "Mollets Debout":             { parent:"Squat",       ratio:0.90, note:"~90% du Squat — estimation" },
 
   // ── GAINAGE / ABDOS ──────────────────────────────────────────────────────
   // Pas de poids — on retourne null intentionnellement
