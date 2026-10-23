@@ -438,12 +438,36 @@ const BLOCKS = [
    wp:[{lbl:"Intro lourd",ro:0,vm:0.9},{lbl:"Lourd",ro:0.5,vm:1},{lbl:"Très lourd",ro:1,vm:0.9},{lbl:"Pic",ro:1.5,vm:0.8},{lbl:"Deload",ro:-2,vm:0.5}]},
 
   {id:"perso_ppl",emoji:"🏗️",name:"PPL — POIGNET (HYPERTROPHIE + SÈCHE)",inspo:"Push / Pull / Legs · 3 séances/semaine",color:"#10b981",weeks:6,level:"Mon Programme",
-   desc:"Bloc PPL de 3 séances/semaine pendant la blessure au poignet : hypertrophie, perte de gras en gardant la force, retour progressif au powerlifting. RPE 6 puis 7, jamais à l'échec. La progression dépend de la douleur et de la récupération, pas seulement du calendrier.",
-   notes:"🚦 Douleur au poignet : 0-2/10 = on continue · 3-4/10 = baisse la charge ou change d'exo, pas de progression · 5/10 ou +, fourmillements, perte de force = stop + avis médical/kiné\n🧪 Machines et prises neutres ne sont PAS sûres par défaut : teste chaque exo léger d'abord, poignet aligné avec l'avant-bras\n🧤 Sangles/crochets sur les tirages et le curl\n🎯 Reps affichées = milieu de la fourchette (ex. 10 = 8-12)\n📈 Double progression : toutes les séries en haut de fourchette avec 3+ reps en réserve, 2 séances de suite sans douleur → +2,5 à 5 % de charge\n⏸️ Mauvais sommeil, grosse fatigue ou douleur orange → même poids, pas de montée\n🍗 Protéines 160-190 g/jour · déficit modéré · 8 000-10 000 pas/jour\n📖 Détail des exos, alternatives et critères de reprise : voir le document du programme",
+   desc:"Bloc PPL de 3 séances/semaine pendant la blessure au poignet : hypertrophie, perte de gras en gardant la force, retour progressif au powerlifting. Mobilité en début de séance Push et Legs, supersets en fin de séance. RPE 6 puis 7, jamais à l'échec. La progression dépend de la douleur et de la récupération, pas seulement du calendrier.",
+   notes:"🚦 Douleur au poignet : 0-2/10 = on continue · 3-4/10 = baisse la charge ou change d'exo, pas de progression · 5/10 ou +, fourmillements, perte de force = stop + avis médical/kiné\n🧪 Teste chaque exo léger d'abord, surtout militaire, skull crusher, bent over row, curl et fentes Zercher : ce sont ceux qui chargent le plus le poignet\n🧤 Sangles/crochets sur le bent over row et les tirages\n⚡ Superset = enchaîne les 2 exos sans repos, puis 1:30-2:00 de repos\n🎯 Reps affichées = milieu de la fourchette (ex. 9 = 8-10)\n📈 Double progression : toutes les séries en haut de fourchette avec 3+ reps en réserve, 2 séances de suite sans douleur → +2,5 à 5 % de charge\n⏸️ Mauvais sommeil, grosse fatigue ou douleur orange → même poids, pas de montée\n🍗 Protéines 160-190 g/jour · déficit modéré · 8 000-10 000 pas/jour\n📖 Détail des exos, alternatives et critères de reprise : voir le document du programme",
    days:[
-     {name:"Jour 1",label:"Push",exs:[{l:"Chest Press Machine",s:3,r:10,rpe:6},{l:"Développé Incliné Machine",s:3,r:10,rpe:6},{l:"Élévations Latérales Poulie",s:4,r:13,rpe:6},{l:"Écartés Poulie",s:3,r:13,rpe:6},{l:"Pushdown Corde",s:3,r:12,rpe:6}]},
-     {name:"Jour 2",label:"Pull",exs:[{l:"Tirage Vertical",s:3,r:10,rpe:6},{l:"Rowing Poitrine Appuyée",s:3,r:10,rpe:6},{l:"Rowing Poulie Basse",s:2,r:11,rpe:6},{l:"Oiseau Machine",s:3,r:14,rpe:6},{l:"Curl Marteau Corde",s:3,r:11,rpe:6},{l:"Face Pull",s:3,r:15,rpe:6}]},
-     {name:"Jour 3",label:"Legs",exs:[{l:"Presse à Cuisses",s:3,r:11,rpe:6},{l:"Hack Squat",s:3,r:9,rpe:6},{l:"Leg Curl Assis",s:3,r:11,rpe:6},{l:"Hip Thrust Machine",s:3,r:10,rpe:6},{l:"Leg Extension",s:3,r:13,rpe:6},{l:"Mollets Debout",s:4,r:13,rpe:6}]},
+     {name:"Jour 1",label:"Push",exs:[
+       {l:"RAC Épaule",s:1,r:1,rpe:6,tag:"MOBILITÉ"},
+       {l:"PAILS/RAILS Rotation Interne Épaule",s:1,r:1,rpe:6,tag:"MOBILITÉ"},
+       {l:"Windmill",s:1,r:1,rpe:6,tag:"MOBILITÉ"},
+       {l:"Écartés Poulie",s:3,r:13,rpe:6},
+       {l:"DVC Incliné",s:3,r:9,rpe:6},
+       {l:"Développé Militaire Assis",s:3,r:9,rpe:6},
+       {l:"Skull Crusher",s:3,r:11,rpe:6},
+       {l:"Pushdown Câble",s:3,r:13,rpe:6,tag:"SUPERSET A"},
+       {l:"Élévations Latérales Poulie",s:3,r:13,rpe:6,tag:"SUPERSET A",cue:"Poulie mi-hauteur, corps droit"}]},
+     {name:"Jour 2",label:"Pull",exs:[
+       {l:"Bent Over Row",s:3,r:9,rpe:6,cue:"Tirage vers le sternum, coudes écartés"},
+       {l:"Tirage Horizontal Unilatéral",s:3,r:11,rpe:6,cue:"Prise serrée, un bras à la fois"},
+       {l:"Oiseau Machine",s:3,r:14,rpe:6},
+       {l:"Pull-over",s:3,r:12,rpe:6},
+       {l:"Face Away Cable Curl",s:3,r:11,rpe:6,tag:"SUPERSET B",cue:"Coude vers l'arrière, buste légèrement penché en avant"},
+       {l:"Face Pull",s:3,r:14,rpe:6,tag:"SUPERSET B"}]},
+     {name:"Jour 3",label:"Legs",exs:[
+       {l:"RAC Hanche",s:1,r:1,rpe:6,tag:"MOBILITÉ"},
+       {l:"PAILS/RAILS Ischio",s:1,r:1,rpe:6,tag:"MOBILITÉ",cue:"Ramène ton pied arrière au max en position de fente profonde"},
+       {l:"Squat Profond + Abduction",s:1,r:1,rpe:6,tag:"MOBILITÉ"},
+       {l:"Presse Quad",s:3,r:11,rpe:6},
+       {l:"Hip Thrust",s:3,r:9,rpe:6},
+       {l:"Fentes Arrière Zercher",s:3,r:8,rpe:6,cue:"Par jambe"},
+       {l:"Leg Curl Assis",s:3,r:11,rpe:6,cue:"Buste penché"},
+       {l:"Mollets Debout",s:3,r:13,rpe:6,tag:"SUPERSET C"},
+       {l:"Copenhagen Plank",s:3,r:1,rpe:6,tag:"SUPERSET C",u:"20-30 s par côté"}]},
    ],
    wp:[{lbl:"S1 Reprise",ro:0,vm:0.8},{lbl:"S2",ro:0,vm:1},{lbl:"S3",ro:0.5,vm:1},{lbl:"S4",ro:0.5,vm:1},{lbl:"S5 Conso.",ro:1,vm:1},{lbl:"S6 Conso.",ro:1,vm:1}]},
 ];
@@ -483,7 +507,8 @@ function getExs(block,wk,di){
     lift:ex.l,
     sets:Math.max(1,Math.round(ex.s*w.vm)),
     reps:ex.r,
-    targetRpe:Math.min(10,Math.max(6,parseFloat((ex.rpe+w.ro).toFixed(1))))
+    targetRpe:Math.min(10,Math.max(6,parseFloat((ex.rpe+w.ro).toFixed(1)))),
+    tag:ex.tag,cue:ex.cue,u:ex.u
   }));
 }
 function getBlock(){return BLOCKS.find(b=>b.id===STATE.activeId)||null;}
@@ -532,20 +557,21 @@ const EXERCISE_RELATIONS = {
   "Face Pull":           { parent:"Bench Press", ratio:0.15, note:"~15% du Bench — exercice léger, 15 reps min" },
 
   // ── BLOC PPL (hypertrophie, poignet) ─────────────────────────────────────
-  "Chest Press Machine":        { parent:"Bench Press", ratio:0.80, note:"~80% du Bench — varie beaucoup selon la machine" },
-  "Développé Incliné Machine":  { parent:"Bench Press", ratio:0.70, note:"~70% du Bench — estimation" },
-  "Élévations Latérales Poulie":{ parent:"Bench Press", ratio:0.12, note:"~12% du Bench — un bras, estimation" },
   "Écartés Poulie":             { parent:"Bench Press", ratio:0.18, note:"~18% du Bench — par bras, estimation" },
-  "Pushdown Corde":             { parent:"Bench Press", ratio:0.40, note:"~40% du Bench — estimation" },
-  "Rowing Poitrine Appuyée":    { parent:"Deadlift",    ratio:0.50, note:"~50% du DL — machine, estimation" },
-  "Rowing Poulie Basse":        { parent:"Deadlift",    ratio:0.48, note:"~48% du DL — estimation" },
+  "DVC Incliné":                { parent:"Bench Press", ratio:0.75, note:"~75% du Bench — barre ; si haltères ~35% par main" },
+  "Développé Militaire Assis":  { parent:"Bench Press", ratio:0.60, note:"~60% du Bench — barre ; si haltères ~25% par main" },
+  "Skull Crusher":              { parent:"Bench Press", ratio:0.35, note:"~35% du Bench — estimation" },
+  "Pushdown Câble":             { parent:"Bench Press", ratio:0.40, note:"~40% du Bench — estimation" },
+  "Élévations Latérales Poulie":{ parent:"Bench Press", ratio:0.12, note:"~12% du Bench — un bras, estimation" },
+  "Bent Over Row":              { parent:"Deadlift",    ratio:0.55, note:"~55% du DL — estimation" },
+  "Tirage Horizontal Unilatéral":{ parent:"Deadlift",   ratio:0.30, note:"~30% du DL — par bras, estimation" },
   "Oiseau Machine":             { parent:"Bench Press", ratio:0.25, note:"~25% du Bench — estimation" },
-  "Curl Marteau Corde":         { parent:"Deadlift",    ratio:0.20, note:"~20% du DL — estimation" },
-  "Presse à Cuisses":           { parent:"Squat",       ratio:2.00, note:"~200% du Squat — dépend de la machine et des plaques" },
-  "Hack Squat":                 { parent:"Squat",       ratio:0.95, note:"~95% du Squat — estimation" },
+  "Pull-over":                  { parent:"Deadlift",    ratio:0.25, note:"~25% du DL — estimation" },
+  "Face Away Cable Curl":       { parent:"Deadlift",    ratio:0.12, note:"~12% du DL — par bras, estimation" },
+  "Presse Quad":                { parent:"Squat",       ratio:1.80, note:"~180% du Squat — dépend de la machine et des plaques" },
+  "Hip Thrust":                 { parent:"Squat",       ratio:1.00, note:"~100% du Squat — barre ; machine ~110%" },
+  "Fentes Arrière Zercher":     { parent:"Squat",       ratio:0.45, note:"~45% du Squat — charge totale sur la barre, par jambe" },
   "Leg Curl Assis":             { parent:"Deadlift",    ratio:0.40, note:"~40% du DL — estimation" },
-  "Hip Thrust Machine":         { parent:"Squat",       ratio:1.10, note:"~110% du Squat — varie beaucoup selon la machine" },
-  "Leg Extension":              { parent:"Squat",       ratio:0.60, note:"~60% du Squat — estimation" },
   "Mollets Debout":             { parent:"Squat",       ratio:0.90, note:"~90% du Squat — estimation" },
 
   // ── GAINAGE / ABDOS ──────────────────────────────────────────────────────
@@ -1345,7 +1371,9 @@ function renderBlocks(root){
     dc.appendChild(div({fontSize:"12px",fontWeight:"600",color:block.color,marginBottom:"8px"},`${d.name} — ${d.label}`));
     exs.forEach((ex,ei)=>{
       const row=div({display:"flex",justifyContent:"space-between",fontSize:"12px",padding:"3px 0",borderTop:ei>0?"1px solid #0f172a":"none"});
-      row.innerHTML=`<span style="color:#d1d5db">${ex.lift}</span><span style="color:${rpeC(ex.targetRpe)};font-weight:600">${ex.sets}×${ex.reps} @ RPE ${ex.targetRpe}</span>`;
+      const _mob=ex.tag==="MOBILITÉ";
+      const _tg=ex.tag?`<span style="color:${block.color};font-size:9px;font-weight:700;margin-right:6px">${ex.tag}</span>`:"";
+      row.innerHTML=`<span style="color:#d1d5db">${_tg}${ex.lift}</span>`+(_mob?"":`<span style="color:${rpeC(ex.targetRpe)};font-weight:600">${ex.sets}×${ex.u||ex.reps} @ RPE ${ex.targetRpe}</span>`);
       dc.appendChild(row);
     });
     card.appendChild(dc);
@@ -1523,15 +1551,17 @@ function renderSession(root){
 
     // Header
     const exHdr=div({display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"12px"});
-    exHdr.innerHTML=`<div>
-        <div style="font-size:18px;font-weight:800;color:#6366f1;letter-spacing:1px">${ex.lift}</div>
-        <div style="font-size:11px;color:#475569;margin-top:2px">${ex.sets} séries × ${ex.reps} reps · RPE cible ${ex.targetRpe}</div>
-      </div>
-      <div style="background:${rpeC(ex.targetRpe)}18;border:1px solid ${rpeC(ex.targetRpe)}40;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0">
+    const isMob=ex.tag==="MOBILITÉ";
+    const tagHtml=ex.tag?`<div style="margin-bottom:4px"><span style="display:inline-block;background:${block.color}22;color:${block.color};border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:1px">${ex.tag}</span></div>`:"";
+    const cueHtml=ex.cue?`<div style="font-size:11px;color:#94a3b8;margin-top:4px">${ex.cue}</div>`:"";
+    const setsHtml=isMob?"":`<div style="font-size:11px;color:#475569;margin-top:2px">${ex.sets} séries × ${ex.u||(ex.reps+" reps")} · RPE cible ${ex.targetRpe}</div>`;
+    const rpeBadge=isMob?"":`<div style="background:${rpeC(ex.targetRpe)}18;border:1px solid ${rpeC(ex.targetRpe)}40;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0">
         <div style="font-size:16px;font-weight:800;color:${rpeC(ex.targetRpe)}">${ex.targetRpe}</div>
         <div style="font-size:9px;color:#475569">${RPE_LABEL[ex.targetRpe]||""}</div>
       </div>`;
+    exHdr.innerHTML=`<div>${tagHtml}<div style="font-size:18px;font-weight:800;color:#6366f1;letter-spacing:1px">${ex.lift}</div>${setsHtml}${cueHtml}</div>${rpeBadge}`;
     card.appendChild(exHdr);
+    if(isMob){exHdr.style.marginBottom="0";root.appendChild(card);return;}
 
     // Suggestion
     if(sugg){
