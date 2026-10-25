@@ -478,7 +478,7 @@ let STATE = {
   activeId:null, week:0, dayIdx:0,
   log:{}, saving:false, saved:false,
   levelFilter:"Mon Programme",
-  history:[], e1rms:{},
+  history:[], e1rms:{}, eq:{},
   bodyweight:[], // [{date, weight}]
 };
 
@@ -496,6 +496,7 @@ function load(){
   }catch(e){}
   try{const w=localStorage.getItem("pl_bw");if(w)STATE.bodyweight=JSON.parse(w);}catch(e){}
   try{const l=localStorage.getItem("pl_log");if(l)STATE.log=JSON.parse(l);}catch(e){}
+  try{const q=localStorage.getItem("pl_eq");STATE.eq=q?JSON.parse(q):{};}catch(e){STATE.eq={};}
 }
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
 
@@ -503,13 +504,21 @@ function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(
 function getExs(block,wk,di){
   const w=block.wp[wk],d=block.days[di];
   if(!w||!d)return[];
-  return d.exs.map(ex=>({
-    lift:ex.l,
-    sets:Math.max(1,Math.round(ex.s*w.vm)),
-    reps:ex.r,
-    targetRpe:Math.min(10,Math.max(6,parseFloat((ex.rpe+w.ro).toFixed(1)))),
-    tag:ex.tag,cue:ex.cue,u:ex.u
-  }));
+  return d.exs.map(ex=>{
+    const base=ex.l, opts=EQ_OPTIONS[base]||null;
+    const ch=opts?eqChoice(base):null;
+    const isDef=!ch||ch===opts[0];
+    return {
+      lift:isDef?base:`${base} (${ch.l})`,
+      base,
+      eqOpts:opts, eqKey:ch?ch.k:null, eqNote:ch?(ch.n||null):null,
+      eqMult:ch&&ch.m?ch.m:1, eqP:ch?ch.p:undefined, eqR:ch?ch.r:undefined,
+      sets:Math.max(1,Math.round(ex.s*w.vm)),
+      reps:ex.r,
+      targetRpe:Math.min(10,Math.max(6,parseFloat((ex.rpe+w.ro).toFixed(1)))),
+      tag:ex.tag,cue:ex.cue,u:ex.u
+    };
+  });
 }
 function getBlock(){return BLOCKS.find(b=>b.id===STATE.activeId)||null;}
 function getLastData(lift){
@@ -581,8 +590,40 @@ const EXERCISE_RELATIONS = {
   "Crunch":              { parent:null,          ratio:null, note:"Exercice au poids du corps" },
 };
 
-function getParentE1rm(lift){
-  const rel = EXERCISE_RELATIONS[lift];
+// ── VARIANTES D'ÉQUIPEMENT ───────────────────────────────────────────────────
+// Le 1er choix = exercice par défaut (celui du programme). m = multiplicateur appliqué au ratio
+// de l'exercice par défaut · n = précision affichée (ex. poids par main) · p/r = parent et ratio
+// absolus quand l'exercice par défaut n'a pas de charge. Valeurs = estimations de départ.
+const EQ_OPTIONS = {
+  "Écartés Poulie":              [{k:"poulie",l:"Poulie",m:1},{k:"machine",l:"Machine pec deck",m:2},{k:"halteres",l:"Haltères",m:0.7,n:"Poids par main"}],
+  "DVC Incliné":                 [{k:"barre",l:"Barre",m:1},{k:"halteres",l:"Haltères",m:0.45,n:"Poids par main"},{k:"machine",l:"Machine",m:0.93}],
+  "Développé Militaire Assis":   [{k:"barre",l:"Barre",m:1},{k:"halteres",l:"Haltères",m:0.42,n:"Poids par main"},{k:"machine",l:"Machine",m:0.9}],
+  "Skull Crusher":               [{k:"barre",l:"Barre EZ",m:1},{k:"halteres",l:"Haltères",m:0.5,n:"Poids par main"},{k:"poulie",l:"Poulie",m:0.85}],
+  "Pushdown Câble":              [{k:"corde",l:"Corde",m:1},{k:"barre",l:"Barre",m:1.15},{k:"main",l:"Une main",m:0.5,n:"Poids pour un bras"}],
+  "Élévations Latérales Poulie": [{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltères",m:1.2,n:"Poids par main"},{k:"machine",l:"Machine",m:2}],
+  "Bent Over Row":               [{k:"barre",l:"Barre",m:1},{k:"halteres",l:"Haltères",m:0.4,n:"Poids par main"},{k:"machine",l:"Machine",m:0.9},{k:"poulie",l:"Poulie",m:0.8}],
+  "Tirage Horizontal Unilatéral":[{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltère",m:1.2,n:"Poids pour un bras"},{k:"machine",l:"Machine",m:1.1,n:"Poids pour un bras"}],
+  "Oiseau Machine":              [{k:"machine",l:"Machine",m:1},{k:"halteres",l:"Haltères",m:0.3,n:"Poids par main"},{k:"poulie",l:"Poulie",m:0.4,n:"Poids pour un bras"}],
+  "Pull-over":                   [{k:"poulie",l:"Poulie",m:1},{k:"haltere",l:"Haltère",m:0.8,n:"Un haltère tenu à deux mains"},{k:"machine",l:"Machine",m:1.4}],
+  "Face Away Cable Curl":        [{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltères",m:0.9,n:"Poids par main"},{k:"barre",l:"Barre EZ",m:1.8}],
+  "Face Pull":                   [{k:"corde",l:"Corde",m:1},{k:"main",l:"Une main",m:0.5,n:"Poids pour un bras"}],
+  "Presse Quad":                 [{k:"presse",l:"Presse 45°",m:1},{k:"hack",l:"Hack squat",m:0.53},{k:"uni",l:"Presse unilatérale",m:0.5,n:"Poids total pour une jambe"}],
+  "Hip Thrust":                  [{k:"barre",l:"Barre",m:1},{k:"machine",l:"Machine",m:1.1},{k:"halteres",l:"Haltère",m:0.4,n:"Un haltère posé sur les hanches"}],
+  "Fentes Arrière Zercher":      [{k:"zercher",l:"Zercher",m:1},{k:"halteres",l:"Haltères",m:0.3,n:"Poids par main"},{k:"smith",l:"Smith",m:1.2}],
+  "Leg Curl Assis":              [{k:"assis",l:"Assis",m:1},{k:"couche",l:"Couché",m:1.05}],
+  "Mollets Debout":              [{k:"debout",l:"Machine debout",m:1},{k:"presse",l:"À la presse",m:1.2},{k:"assis",l:"Machine assise",m:0.5},{k:"halteres",l:"Haltère une jambe",m:0.2,n:"Poids pour une jambe"}],
+  "Copenhagen Plank":            [{k:"pc",l:"Poids du corps"},{k:"adduction",l:"Adduction machine",p:"Squat",r:0.45}],
+};
+function eqChoice(base){
+  const o=EQ_OPTIONS[base]; if(!o) return null;
+  const k=(STATE.eq||{})[base];
+  return o.find(x=>x.k===k)||o[0];
+}
+
+function getParentE1rm(lift,ex){
+  let rel = EXERCISE_RELATIONS[(ex&&ex.base)||lift];
+  if(ex&&ex.eqP) rel = { parent:ex.eqP, ratio:ex.eqR, note:ex.eqNote||"estimation" };
+  else if(rel&&ex&&ex.eqMult&&ex.eqMult!==1) rel = { ...rel, ratio:rel.ratio*ex.eqMult };
   if(!rel) return null;
   if(!rel.parent || !rel.ratio) return null; // exercice au poids du corps
   const parentE1rm = STATE.e1rms[rel.parent] || null;
@@ -608,7 +649,7 @@ function getSugg(ex){
   }
 
   // 3. Calcule depuis le mouvement parent si c'est un accessoire
-  const parentData = getParentE1rm(ex.lift);
+  const parentData = getParentE1rm(ex.lift,ex);
   if(parentData){
     const derivedE1rm = Math.round(parentData.e1rm * parentData.ratio);
     return calcSuggest(derivedE1rm, ex.reps, ex.targetRpe);
@@ -622,7 +663,7 @@ function getSuggInfo(ex){
   const last = getLastData(ex.lift);
   if(last) return { source:"historique", label:null };
   if(STATE.e1rms[ex.lift]) return { source:"e1rm", label:null };
-  const parentData = getParentE1rm(ex.lift);
+  const parentData = getParentE1rm(ex.lift,ex);
   if(parentData) return {
     source:"parent",
     label:`Calculé depuis ${parentData.parent} × ${Math.round(parentData.ratio*100)}%`,
@@ -1562,6 +1603,23 @@ function renderSession(root){
     exHdr.innerHTML=`<div>${tagHtml}<div style="font-size:18px;font-weight:800;color:#6366f1;letter-spacing:1px">${ex.lift}</div>${setsHtml}${cueHtml}</div>${rpeBadge}`;
     card.appendChild(exHdr);
     if(isMob){exHdr.style.marginBottom="0";root.appendChild(card);return;}
+
+    // Équipement (menu déroulant)
+    if(ex.eqOpts){
+      const eqRow=div({display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"});
+      eqRow.appendChild(div({fontSize:"10px",color:"#475569",letterSpacing:"1px"},"ÉQUIPEMENT"));
+      const sel=document.createElement("select");
+      Object.assign(sel.style,{background:"#020817",border:"1px solid #1e293b",borderRadius:"8px",color:"#e2e8f0",padding:"8px 10px",fontSize:"14px",fontWeight:"600",flex:"1",minWidth:"150px"});
+      ex.eqOpts.forEach(o=>{const op=document.createElement("option");op.value=o.k;op.textContent=o.l;if(o.k===ex.eqKey)op.selected=true;sel.appendChild(op);});
+      sel.onchange=e=>{
+        STATE.eq[ex.base]=e.target.value;save("pl_eq",STATE.eq);
+        if(STATE.log[i]){delete STATE.log[i].weight;save("pl_log",STATE.log);}
+        renderTab("session",renderSession);
+      };
+      eqRow.appendChild(sel);
+      if(ex.eqNote)eqRow.appendChild(div({fontSize:"11px",color:"#f59e0b",width:"100%"},"⚖️ "+ex.eqNote));
+      card.appendChild(eqRow);
+    }
 
     // Suggestion
     if(sugg){
