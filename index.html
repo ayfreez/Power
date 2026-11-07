@@ -50,6 +50,14 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes fadeup{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
     @keyframes fadein{from{opacity:0}to{opacity:1}}
+    @keyframes illf{0%,38%{opacity:0}55%,92%{opacity:1}100%{opacity:0}}
+    .ill{position:relative;width:88px;height:74px;flex-shrink:0;border-radius:10px;background:#020817;border:1px solid #1e293b;overflow:hidden;cursor:pointer}
+    .ill svg{position:absolute;left:0;top:0;width:100%;height:100%}
+    .ill svg+svg{animation:illf 2.2s ease-in-out infinite}
+    .ill:after{content:"⤢";position:absolute;right:4px;bottom:1px;font-size:10px;color:#475569}
+    .id{display:none}.dbmode .ib{display:none}.dbmode .id{display:inline}
+    .ill-big{flex:1;min-width:0;background:#020817;border:1px solid #1e293b;border-radius:10px;padding:4px}
+    .ill-big svg{width:100%;height:auto;display:block}
     .page{animation:fadeup .18s ease}
 
     /* ── LAYOUT ── */
@@ -453,7 +461,7 @@ const BLOCKS = [
        {l:"Élévations Latérales Poulie",s:3,r:13,rpe:6,tag:"SUPERSET A",cue:"Poulie mi-hauteur, corps droit"}]},
      {name:"Jour 2",label:"Pull",exs:[
        {l:"Bent Over Row",s:3,r:9,rpe:6,cue:"Tirage vers le sternum, coudes écartés"},
-       {l:"Tirage Horizontal Unilatéral",s:3,r:11,rpe:6,cue:"Prise serrée, un bras à la fois"},
+       {l:"Tirage Vertical",s:3,r:10,rpe:6,cue:"Poitrine sortie, tirer les coudes vers les hanches"},
        {l:"Oiseau Machine",s:3,r:14,rpe:6},
        {l:"Pull-over",s:3,r:12,rpe:6},
        {l:"Face Away Cable Curl",s:3,r:11,rpe:6,tag:"SUPERSET B",cue:"Coude vers l'arrière, buste légèrement penché en avant"},
@@ -573,7 +581,6 @@ const EXERCISE_RELATIONS = {
   "Pushdown Câble":             { parent:"Bench Press", ratio:0.40, note:"~40% du Bench — estimation" },
   "Élévations Latérales Poulie":{ parent:"Bench Press", ratio:0.12, note:"~12% du Bench — un bras, estimation" },
   "Bent Over Row":              { parent:"Deadlift",    ratio:0.55, note:"~55% du DL — estimation" },
-  "Tirage Horizontal Unilatéral":{ parent:"Deadlift",   ratio:0.30, note:"~30% du DL — par bras, estimation" },
   "Oiseau Machine":             { parent:"Bench Press", ratio:0.25, note:"~25% du Bench — estimation" },
   "Pull-over":                  { parent:"Deadlift",    ratio:0.25, note:"~25% du DL — estimation" },
   "Face Away Cable Curl":       { parent:"Deadlift",    ratio:0.12, note:"~12% du DL — par bras, estimation" },
@@ -590,6 +597,153 @@ const EXERCISE_RELATIONS = {
   "Crunch":              { parent:null,          ratio:null, note:"Exercice au poids du corps" },
 };
 
+// ── ILLUSTRATIONS (pictogrammes SVG, 2 images par exercice : départ / arrivée) ──────────
+// Viewbox 120×90 · vue de profil sauf mention « face ». Aucune dépendance : tout est dessiné ici.
+const ILL_C={b:"#e2e8f0",far:"#8b9bb4",eq:"#818cf8",sc:"#475569",acc:"#34d399",cab:"#94a3b8"};
+function _pl(pts,w,c){return `<polyline points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="none" stroke="${c||ILL_C.b}" stroke-width="${w||5}" stroke-linecap="round" stroke-linejoin="round"/>`;}
+function _ik(a,t,l1,l2,s){
+  let dx=t[0]-a[0],dy=t[1]-a[1],d=Math.hypot(dx,dy)||1;d=Math.min(d,l1+l2-0.01);
+  const ux=dx/d,uy=dy/d,x=(l1*l1-l2*l2+d*d)/(2*d),h=Math.sqrt(Math.max(0,l1*l1-x*x));
+  return [a[0]+ux*x-uy*h*s,a[1]+uy*x+ux*h*s];
+}
+const _rad=d=>d*Math.PI/180;
+function _head(c,r){return `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r||5.5}" fill="${ILL_C.b}"/>`;}
+function _fig(o){ // corps de profil : hip, tor (angle du buste) ou neck, an/kn (jambe), an2/kn2 (jambe de derrière), wr/el (bras)
+  const T=o.T||24,hip=o.hip;
+  const neck=o.neck||[hip[0]+T*Math.cos(_rad(o.tor)),hip[1]-T*Math.sin(_rad(o.tor))];
+  const L=Math.hypot(neck[0]-hip[0],neck[1]-hip[1])||1,ux=(neck[0]-hip[0])/L,uy=(neck[1]-hip[1])/L;
+  const head=[neck[0]+ux*9,neck[1]+uy*9];
+  let s="";
+  if(o.an2){const k2=o.kn2||_ik(hip,o.an2,21,21,o.kd||1);s+=_pl([hip,k2,o.an2].concat(o.toe2?[o.toe2]:[]),4.5,ILL_C.far);}
+  const kn=o.kn||_ik(hip,o.an,21,21,o.kd||1);
+  s+=_pl([hip,kn,o.an].concat(o.toe?[o.toe]:[]),5);
+  s+=_pl([hip,neck],7);
+  if(o.wr2)s+=_pl([neck,o.el2||_ik(neck,o.wr2,12,12,o.ed||1),o.wr2],4,ILL_C.far);
+  if(o.wr)s+=_pl([neck,o.el||_ik(neck,o.wr,12,12,o.ed||1),o.wr],4.5);
+  return s+_head(head);
+}
+function _ffig(o){ // corps de face : neck, hip, l=[chevilleG,chevilleD], k=[genouG,genouD], aL/aR=[coude,poignet]
+  const L=Math.hypot(o.neck[0]-o.hip[0],o.neck[1]-o.hip[1])||1,ux=(o.neck[0]-o.hip[0])/L,uy=(o.neck[1]-o.hip[1])/L;
+  const hd=[o.neck[0]+ux*9,o.neck[1]+uy*9],sL=[o.neck[0]+uy*8,o.neck[1]-ux*8],sR=[o.neck[0]-uy*8,o.neck[1]+ux*8];
+  let s=_pl([o.hip,o.k?o.k[0]:o.l[0],o.l[0]],5)+_pl([o.hip,o.k?o.k[1]:o.l[1],o.l[1]],5);
+  s+=_pl([o.hip,o.neck],7)+_pl([sL,sR],5);
+  if(o.aL)s+=_pl([sL,o.aL[0],o.aL[1]],4.5,ILL_C.far);
+  if(o.aR)s+=_pl([sR,o.aR[0],o.aR[1]],4.5);
+  return s+_head(hd);
+}
+const _G=_pl([[6,83],[114,83]],1.5,ILL_C.sc);
+const _bar=(p,r)=>{r=r||6;const bar=`<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="none" stroke="${ILL_C.eq}" stroke-width="2.6"/><circle cx="${p[0]}" cy="${p[1]}" r="1.6" fill="${ILL_C.eq}"/>`;return r<5?bar:`<g class="ib">${bar}</g><g class="id"><circle cx="${p[0]}" cy="${p[1]}" r="4.2" fill="${ILL_C.eq}"/></g>`;};
+const _cab=(a,b)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${ILL_C.cab}" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="${b[0]}" cy="${b[1]}" r="2.6" fill="none" stroke="${ILL_C.cab}" stroke-width="1.4"/>`;
+const _bench=(a,b,w)=>_pl([a,b],w||6,ILL_C.sc);
+const _arrow=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy),ux=dx/d,uy=dy/d;return `<g stroke="${ILL_C.acc}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/><polyline points="${(b[0]-ux*4-uy*3).toFixed(1)},${(b[1]-uy*4+ux*3).toFixed(1)} ${b[0]},${b[1]} ${(b[0]-ux*4+uy*3).toFixed(1)},${(b[1]-uy*4-ux*3).toFixed(1)}"/></g>`;};
+const _post=x=>_pl([[x,4],[x,83]],2,ILL_C.sc);
+const _ring=(c,r)=>`<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="none" stroke="${ILL_C.acc}" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+
+const ILL={
+ // ───────────────────────── PUSH ─────────────────────────
+ "Écartés Poulie":[
+  _G+_post(14)+_cab([42,22],[14,6])+_fig({hip:[56,40],tor:84,an:[56,82],an2:[64,82],wr:[42,22],el:[47,31]})+_arrow([48,12],[70,18]),
+  _G+_post(14)+_cab([82,30],[14,6])+_fig({hip:[56,40],tor:84,an:[56,82],an2:[64,82],wr:[82,30],el:[70,25]})],
+ "DVC Incliné":[
+  _G+_bench([14,66],[38,62],6)+_bench([38,62],[80,36],6)+_fig({hip:[36,58],tor:33,an:[18,80],kd:1,wr:[44,22],el:[52,34]})+_bar([44,22],7),
+  _G+_bench([14,66],[38,62],6)+_bench([38,62],[80,36],6)+_fig({hip:[36,58],tor:33,an:[18,80],kd:1,wr:[58,38],el:[44,40]})+_bar([58,38],7)],
+ "Développé Militaire Assis":[
+  _G+_pl([[30,28],[30,64]],5,ILL_C.sc)+_bench([30,64],[58,64],6)+_fig({hip:[40,60],tor:90,an:[62,82],kn:[62,58],wr:[48,18],el:[52,28]})+_bar([48,18],7),
+  _G+_pl([[30,28],[30,64]],5,ILL_C.sc)+_bench([30,64],[58,64],6)+_fig({hip:[40,60],tor:90,an:[62,82],kn:[62,58],wr:[44,13],el:[46,26]})+_bar([44,13],7)],
+ "Skull Crusher":[
+  _G+_bench([14,64],[90,64],6)+_pl([[16,64],[16,83]],3,ILL_C.sc)+_pl([[88,64],[88,83]],3,ILL_C.sc)+_fig({hip:[32,60],tor:0,an:[22,80],kd:1,wr:[56,32],el:[56,44]})+_bar([56,32],6),
+  _G+_bench([14,64],[90,64],6)+_pl([[16,64],[16,83]],3,ILL_C.sc)+_pl([[88,64],[88,83]],3,ILL_C.sc)+_fig({hip:[32,60],tor:0,an:[22,80],kd:1,el:[56,38],wr:[68,46]})+_bar([68,46],6)],
+ "Pushdown Câble":[
+  _G+_post(98)+_cab([70,30],[84,4])+_fig({hip:[56,40],tor:90,an:[56,82],an2:[64,82],el:[58,30],wr:[70,30]})+_bar([70,30],3),
+  _G+_post(98)+_cab([60,48],[84,4])+_fig({hip:[56,40],tor:90,an:[56,82],an2:[64,82],el:[58,30],wr:[60,47]})+_bar([60,47],3)],
+ "Élévations Latérales Poulie":[
+  _G+_cab([66,48],[14,46])+_post(14)+_ffig({neck:[60,22],hip:[60,46],l:[[54,82],[66,82]],aL:[[51,34],[50,47]],aR:[[69,34],[66,48]]}),
+  _G+_cab([92,24],[14,46])+_post(14)+_ffig({neck:[60,22],hip:[60,46],l:[[54,82],[66,82]],aL:[[51,34],[50,47]],aR:[[76,22],[92,24]]})+_arrow([86,36],[90,28])],
+ // ───────────────────────── PULL ─────────────────────────
+ "Bent Over Row":[
+  _G+_fig({hip:[54,40],tor:38,an:[52,82],kd:-1,wr:[73,57],el:[73,41]})+_bar([73,57],7),
+  _G+_fig({hip:[54,40],tor:38,an:[52,82],kd:-1,wr:[66,42],el:[61,27]})+_bar([66,42],7)],
+ "Tirage Vertical":[
+  _G+_bench([30,66],[58,66],6)+_pl([[54,50],[72,55]],5,ILL_C.sc)+_cab([52,10],[56,-6])+_fig({hip:[44,62],tor:98,kn:[66,58],an:[66,83],wr:[52,10],el:[48,24]})+_bar([52,10],3)+_pl([[46,10],[58,10]],2.4,ILL_C.eq)+_arrow([62,18],[62,30]),
+  _G+_bench([30,66],[58,66],6)+_pl([[54,50],[72,55]],5,ILL_C.sc)+_cab([50,38],[56,-6])+_fig({hip:[44,62],tor:98,kn:[66,58],an:[66,83],wr:[50,38],el:[38,48]})+_bar([50,38],3)+_pl([[44,38],[56,38]],2.4,ILL_C.eq)],
+ "Oiseau Machine":[
+  _G+_bench([36,64],[62,64],6)+_pl([[58,30],[58,60]],6,ILL_C.sc)+_fig({hip:[46,60],tor:90,an:[66,82],kn:[66,58],wr:[76,32],el:[64,34]})+_bar([76,32],3),
+  _G+_bench([36,64],[62,64],6)+_pl([[58,30],[58,60]],6,ILL_C.sc)+_fig({hip:[46,60],tor:90,an:[66,82],kn:[66,58],wr:[36,32],el:[42,36]})+_bar([36,32],3)],
+ "Pull-over":[
+  _G+_post(98)+_cab([76,10],[88,2])+_fig({hip:[56,42],tor:86,an:[56,83],an2:[64,83],wr:[76,10],el:[66,14]})+_bar([76,10],3),
+  _G+_post(98)+_cab([60,44],[88,2])+_fig({hip:[56,42],tor:86,an:[56,83],an2:[64,83],wr:[60,44],el:[59,32]})+_bar([60,44],3)],
+ "Face Away Cable Curl":[
+  _G+_post(12)+_cab([42,40],[12,48])+_fig({hip:[58,40],tor:80,an:[56,82],an2:[64,82],el:[54,29],wr:[42,40]})+_bar([42,40],3),
+  _G+_post(12)+_cab([58,18],[12,48])+_fig({hip:[58,40],tor:80,an:[56,82],an2:[64,82],el:[54,29],wr:[58,18]})+_bar([58,18],3)],
+ "Face Pull":[
+  _G+_post(106)+_cab([86,16],[106,14])+_fig({hip:[56,40],tor:90,an:[56,82],an2:[64,82],wr:[86,16],el:[74,18]})+_bar([86,16],3),
+  _G+_post(106)+_cab([68,14],[106,14])+_fig({hip:[56,40],tor:90,an:[56,82],an2:[64,82],wr:[68,14],el:[58,20]})+_bar([68,14],3)],
+ // ───────────────────────── LEGS ─────────────────────────
+ "Presse Quad":[
+  _G+_pl([[26,80],[100,38]],3,ILL_C.sc)+_pl([[14,50],[34,66]],5,ILL_C.sc)+_fig({hip:[34,66],tor:140,an:[56,54],kd:1,wr:[40,60],el:[38,62]})+_pl([[56,54],[60,54]],1,ILL_C.sc)+_pl([[60.5,46],[69.5,62]],4,ILL_C.eq),
+  _G+_pl([[26,80],[100,38]],3,ILL_C.sc)+_pl([[14,50],[34,66]],5,ILL_C.sc)+_fig({hip:[34,66],tor:140,an:[72,45],kd:1,wr:[40,60],el:[38,62]})+_pl([[76.5,37],[85.5,53]],4,ILL_C.eq)],
+ "Hip Thrust":[
+  _G+_bench([6,56],[34,56],6)+_pl([[10,56],[10,83]],3,ILL_C.sc)+_pl([[32,56],[32,83]],3,ILL_C.sc)+_fig({hip:[48,66],neck:[30,52],an:[70,82],kd:-1,wr:[44,64],el:[38,60]})+_bar([48,66],7),
+  _G+_bench([6,56],[34,56],6)+_pl([[10,56],[10,83]],3,ILL_C.sc)+_pl([[32,56],[32,83]],3,ILL_C.sc)+_fig({hip:[52,46],neck:[30,53],an:[70,82],kd:-1,wr:[48,46],el:[40,50]})+_bar([52,46],7)],
+ "Fentes Arrière Zercher":[
+  _G+_fig({hip:[58,42],tor:90,an:[58,82],an2:[64,82],el:[69,29],wr:[62,22]})+_bar([69,29],5),
+  _G+_fig({hip:[54,54],tor:88,an:[72,82],kn:[70,62],an2:[24,80],kn2:[40,76],el:[65,41],wr:[58,34]})+_bar([65,41],5)],
+ "Leg Curl Assis":[
+  _G+_pl([[34,24],[36,62]],5,ILL_C.sc)+_bench([34,62],[64,62],6)+_fig({hip:[42,58],tor:95,kn:[64,56],an:[84,66],wr:[54,50],el:[48,44]})+_pl([[82,62],[86,70]],4,ILL_C.eq),
+  _G+_pl([[34,24],[36,62]],5,ILL_C.sc)+_bench([34,62],[64,62],6)+_fig({hip:[42,58],tor:95,kn:[64,56],an:[56,76],wr:[54,50],el:[48,44]})+_pl([[52,74],[60,79]],4,ILL_C.eq)],
+ "Mollets Debout":[
+  _G+_pl([[40,81],[76,81]],4,ILL_C.sc)+_pl([[52,14],[68,14]],5,ILL_C.eq)+_fig({hip:[58,34],tor:90,an:[58,76],toe:[68,80],wr:[68,26],el:[66,18]}),
+  _G+_pl([[40,81],[76,81]],4,ILL_C.sc)+_pl([[52,7],[68,7]],5,ILL_C.eq)+_fig({hip:[58,29],tor:90,an:[58,71],toe:[68,79],wr:[68,21],el:[66,13]})+_arrow([78,60],[78,46])],
+ "Copenhagen Plank":[
+  _G+_bench([92,56],[114,56],5)+_pl([[96,56],[96,83]],3,ILL_C.sc)+_pl([[110,56],[110,83]],3,ILL_C.sc)+_fig({neck:[32,58],hip:[62,66],an:[96,53],kn:[80,60],an2:[86,70],kn2:[76,69],el:[32,78],wr:[48,81]}),
+  _G+_bench([92,56],[114,56],5)+_pl([[96,56],[96,83]],3,ILL_C.sc)+_pl([[110,56],[110,83]],3,ILL_C.sc)+_fig({neck:[32,58],hip:[62,54],an:[96,53],kn:[80,54],an2:[84,68],kn2:[74,62],el:[32,78],wr:[48,81]})+_arrow([62,76],[62,66])],
+ // ───────────────────────── MOBILITÉ ─────────────────────────
+ "RAC Épaule":[
+  _G+_ring([56,18],22)+_fig({hip:[56,42],tor:90,an:[56,83],an2:[64,83],wr:[73,3],el:[66,10]}),
+  _G+_ring([56,18],22)+_fig({hip:[56,42],tor:90,an:[56,83],an2:[64,83],wr:[40,36],el:[46,28]})+_arrow([30,4],[40,2])],
+ "PAILS/RAILS Rotation Interne Épaule":[
+  _G+_ffig({neck:[60,22],hip:[60,46],l:[[54,82],[66,82]],aL:[[51,34],[50,47]],aR:[[69,34],[58,36]]})+_arrow([74,30],[64,36]),
+  _G+_ffig({neck:[60,22],hip:[60,46],l:[[54,82],[66,82]],aL:[[51,34],[50,47]],aR:[[69,34],[82,32]]})+_arrow([74,26],[86,30])],
+ "Windmill":[
+  _G+_ffig({neck:[60,26],hip:[60,50],l:[[44,82],[76,82]],aL:[[56,38],[54,50]],aR:[[64,16],[64,4]]})+_bar([64,3],3),
+  _G+_ffig({neck:[48,34],hip:[60,52],l:[[44,82],[76,82]],aL:[[44,50],[44,68]],aR:[[48,24],[49,12]]})+_bar([49,11],3)],
+ "RAC Hanche":[
+  _G+_ring([68,54],14)+_fig({hip:[68,56],neck:[44,52],an:[68,80],kn:[68,76],wr:[42,80],el:[43,66],an2:[86,70],kn2:[82,56]}),
+  _G+_ring([68,54],14)+_fig({hip:[68,56],neck:[44,52],an:[68,80],kn:[68,76],wr:[42,80],el:[43,66],an2:[92,62],kn2:[84,66]})+_arrow([96,56],[96,66])],
+ "PAILS/RAILS Ischio":[
+  _G+_fig({hip:[50,58],tor:72,an:[72,82],kn:[70,62],an2:[14,82],kn2:[32,74],wr:[66,64],el:[62,58]}),
+  _G+_fig({hip:[50,58],tor:72,an:[72,82],kn:[70,62],an2:[34,52],kn2:[32,74],wr:[66,64],el:[62,58]})+_arrow([22,70],[26,56])],
+ "Squat Profond + Abduction":[
+  _G+_fig({hip:[56,42],tor:90,an:[56,83],an2:[64,83],wr:[70,28],el:[62,32]}),
+  _G+_fig({hip:[46,66],tor:76,an:[56,83],kn:[70,56],wr:[72,46],el:[62,46]})+_arrow([86,54],[94,64])],
+};
+
+function illSvg(name,i){const f=ILL[name];return f?`<svg viewBox="0 -10 120 100" xmlns="http://www.w3.org/2000/svg">${f[i]}</svg>`:"";}
+function illThumb(ex){
+  if(!ILL[ex.base])return "";
+  const m=/^halter/.test(ex.eqKey||"")?" dbmode":"";
+  return `<div class="ill${m}" onclick="openIll(decodeURIComponent('${encodeURIComponent(ex.base)}'),'${ex.eqKey||""}')">${illSvg(ex.base,0)}${illSvg(ex.base,1)}</div>`;
+}
+function openIll(base,k){
+  if(!ILL[base])return;
+  const m=/^halter/.test(k||"")?" dbmode":"";
+  const opt=(EQ_OPTIONS[base]||[]).find(o=>o.k===k);
+  let cue="";BLOCKS.forEach(b=>b.days.forEach(d=>d.exs.forEach(e=>{if(e.l===base&&e.cue)cue=e.cue;})));
+  document.getElementById("modal-box").style.borderColor="#1e293b";
+  document.getElementById("modal-content").innerHTML=`<div style="width:36px;height:4px;background:#1e293b;border-radius:2px;margin:0 auto 14px"></div>
+    <div style="font-size:17px;font-weight:800;color:#6366f1;letter-spacing:1px">${base}</div>
+    ${opt?`<div style="font-size:12px;color:#94a3b8;margin-top:2px">Équipement : ${opt.l}${opt.n?" · "+opt.n:""}</div>`:""}
+    ${cue?`<div style="font-size:12px;color:#94a3b8;margin-top:2px">${cue}</div>`:""}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="flex:1;min-width:0"><div style="font-size:9px;letter-spacing:1px;color:#475569;margin-bottom:4px">DÉPART</div><div class="ill-big${m}">${illSvg(base,0)}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-size:9px;letter-spacing:1px;color:#475569;margin-bottom:4px">ARRIVÉE</div><div class="ill-big${m}">${illSvg(base,1)}</div></div>
+    </div>
+    <div style="font-size:11px;color:#475569;margin-top:12px;line-height:1.6">Schéma du mouvement. Le matériel dessiné (barre ou haltères) suit ton choix ; le mouvement reste le même. Les consignes détaillées sont dans le document du programme.</div>
+    <button onclick="closeModal()" style="margin-top:14px;width:100%;background:#0f172a;border:1px solid #1e293b;color:#6366f1;padding:12px;border-radius:10px;font-size:13px;font-weight:700">Fermer</button>`;
+  document.getElementById("modal-overlay").style.display="flex";
+}
+window.openIll=openIll;
+
 // ── VARIANTES D'ÉQUIPEMENT ───────────────────────────────────────────────────
 // Le 1er choix = exercice par défaut (celui du programme). m = multiplicateur appliqué au ratio
 // de l'exercice par défaut · n = précision affichée (ex. poids par main) · p/r = parent et ratio
@@ -602,7 +756,7 @@ const EQ_OPTIONS = {
   "Pushdown Câble":              [{k:"corde",l:"Corde",m:1},{k:"barre",l:"Barre",m:1.15},{k:"main",l:"Une main",m:0.5,n:"Poids pour un bras"}],
   "Élévations Latérales Poulie": [{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltères",m:1.2,n:"Poids par main"},{k:"machine",l:"Machine",m:2}],
   "Bent Over Row":               [{k:"barre",l:"Barre",m:1},{k:"halteres",l:"Haltères",m:0.4,n:"Poids par main"},{k:"machine",l:"Machine",m:0.9},{k:"poulie",l:"Poulie",m:0.8}],
-  "Tirage Horizontal Unilatéral":[{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltère",m:1.2,n:"Poids pour un bras"},{k:"machine",l:"Machine",m:1.1,n:"Poids pour un bras"}],
+  "Tirage Vertical":             [{k:"poulie",l:"Poulie haute",m:1},{k:"machine",l:"Machine",m:1.1},{k:"main",l:"Une main",m:0.5,n:"Poids pour un bras"}],
   "Oiseau Machine":              [{k:"machine",l:"Machine",m:1},{k:"halteres",l:"Haltères",m:0.3,n:"Poids par main"},{k:"poulie",l:"Poulie",m:0.4,n:"Poids pour un bras"}],
   "Pull-over":                   [{k:"poulie",l:"Poulie",m:1},{k:"haltere",l:"Haltère",m:0.8,n:"Un haltère tenu à deux mains"},{k:"machine",l:"Machine",m:1.4}],
   "Face Away Cable Curl":        [{k:"poulie",l:"Poulie",m:1},{k:"halteres",l:"Haltères",m:0.9,n:"Poids par main"},{k:"barre",l:"Barre EZ",m:1.8}],
@@ -1600,7 +1754,7 @@ function renderSession(root){
         <div style="font-size:16px;font-weight:800;color:${rpeC(ex.targetRpe)}">${ex.targetRpe}</div>
         <div style="font-size:9px;color:#475569">${RPE_LABEL[ex.targetRpe]||""}</div>
       </div>`;
-    exHdr.innerHTML=`<div>${tagHtml}<div style="font-size:18px;font-weight:800;color:#6366f1;letter-spacing:1px">${ex.lift}</div>${setsHtml}${cueHtml}</div>${rpeBadge}`;
+    exHdr.innerHTML=`<div style="display:flex;gap:10px;align-items:flex-start;min-width:0">${illThumb(ex)}<div style="min-width:0">${tagHtml}<div style="font-size:18px;font-weight:800;color:#6366f1;letter-spacing:1px">${ex.lift}</div>${setsHtml}${cueHtml}</div></div>${rpeBadge}`;
     card.appendChild(exHdr);
     if(isMob){exHdr.style.marginBottom="0";root.appendChild(card);return;}
 
